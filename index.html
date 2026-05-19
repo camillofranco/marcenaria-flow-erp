@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marcenaria Flow ERP</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">MF</div>
+          <div>
+            <strong>Marcenaria Flow</strong>
+            <span>ERP operacional</span>
+          </div>
+        </div>
+
+        <div class="role-switcher">
+          <label for="roleSelect">Perfil ativo</label>
+          <select id="roleSelect" data-role-select>
+            <option value="adm">Administrador</option>
+            <option value="medidor">Medidor</option>
+            <option value="projetista">Projetista</option>
+            <option value="comprador">Comprador</option>
+            <option value="montador">Montador</option>
+          </select>
+          <small id="userEmail">adm@marcenariaflow.com</small>
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-item active" data-view="dashboard" type="button">
+            <span aria-hidden="true">⌂</span> Painel
+          </button>
+          <button class="nav-item" data-view="projects" type="button">
+            <span aria-hidden="true">▦</span> Projetos
+          </button>
+          <button class="nav-item" data-view="purchases" type="button">
+            <span aria-hidden="true">□</span> Compras
+          </button>
+          <button class="nav-item" data-view="alerts" type="button">
+            <span aria-hidden="true">!</span> Alertas
+          </button>
+          <button class="nav-item" data-view="drive" type="button">
+            <span aria-hidden="true">⌁</span> Drive
+          </button>
+        </nav>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="roleLabel">Administrador</p>
+            <h1 id="pageTitle">Painel de controle</h1>
+          </div>
+          <div class="topbar-actions">
+            <label class="search-box">
+              <span aria-hidden="true">⌕</span>
+              <input id="searchInput" type="search" placeholder="Buscar projeto, cliente ou endereço" />
+            </label>
+            <button class="primary-action" id="newProjectBtn" type="button">Novo projeto</button>
+          </div>
+        </header>
+
+        <section id="toast" class="toast" hidden></section>
+
+        <section class="metrics" id="metrics"></section>
+
+        <section class="content-grid">
+          <section class="main-panel">
+            <div class="section-heading">
+              <div>
+                <h2 id="mainPanelTitle">Projetos em andamento</h2>
+                <p id="mainPanelSubtitle">Cards filtrados automaticamente conforme o perfil ativo.</p>
+              </div>
+              <div class="segmented" role="tablist" aria-label="Filtro de status">
+                <button class="segment active" data-status-filter="todos" type="button">Todos</button>
+                <button class="segment" data-status-filter="medicao" type="button">Medição</button>
+                <button class="segment" data-status-filter="desenvolvimento" type="button">Projeto</button>
+                <button class="segment" data-status-filter="montagem" type="button">Montagem</button>
+              </div>
+            </div>
+            <div id="projectList" class="project-list"></div>
+          </section>
+
+          <aside class="detail-panel" id="detailPanel" aria-label="Detalhes do projeto selecionado"></aside>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="projectDialog" class="modal">
+      <form method="dialog" class="modal-body" id="projectForm">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Abertura ADM</p>
+            <h2>Novo projeto</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">×</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            Número do projeto
+            <input name="number" required placeholder="MF-2409" />
+          </label>
+          <label>
+            Cliente
+            <input name="client" required placeholder="Nome do cliente" />
+          </label>
+          <label class="wide">
+            Endereço
+            <input name="address" required placeholder="Rua, número, bairro, cidade" />
+          </label>
+          <label>
+            Data da montagem
+            <input name="installDate" required type="date" />
+          </label>
+          <label>
+            Medidor
+            <select name="medidor">
+              <option>Rafael</option>
+              <option>Bianca</option>
+            </select>
+          </label>
+          <label>
+            Projetista
+            <select name="projetista">
+              <option>Camila</option>
+              <option>Diego</option>
+            </select>
+          </label>
+          <label>
+            Montador
+            <select name="montador">
+              <option>João</option>
+              <option>Marcos</option>
+            </select>
+          </label>
+          <label class="wide">
+            Ambientes
+            <input name="rooms" placeholder="Cozinha, Lavanderia, Quarto casal" />
+          </label>
+        </div>
+        <menu class="modal-actions">
+          <button class="secondary-action" value="cancel" type="submit">Cancelar</button>
+          <button class="primary-action" value="default" type="submit">Criar card</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
