@@ -2,3 +2,4 @@ marcenaria-flow-erp.zip
 .DS_Store
 .env
 config.js
+.netlify/
