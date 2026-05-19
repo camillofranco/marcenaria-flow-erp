@@ -1,0 +1,4 @@
+project_number,client_name,client_phone,address,install_date,status,medidor_email,projetista_email,comprador_email,montador_email,rooms,notes
+MF-0001,Cliente Piloto 1,,Endereco completo,2026-06-01,medicao,medidor@cliente.com,projetista@cliente.com,comprador@cliente.com,montador@cliente.com,"Cozinha;Lavanderia;Quarto casal",
+MF-0002,Cliente Piloto 2,,Endereco completo,2026-06-05,abertura,medidor@cliente.com,projetista@cliente.com,comprador@cliente.com,montador@cliente.com,"Home office;Sala",
+

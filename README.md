@@ -1,6 +1,8 @@
 # Marcenaria Flow ERP
 
-Protótipo web navegável para validar o fluxo do aplicativo antes de montar a versão final no Google AppSheet com Google Sheets e Google Drive.
+Webapp de gestão operacional para marcenarias, criado para controlar projetos do início ao fim: abertura, medição, desenvolvimento técnico, compras, fabricação, montagem e assistência.
+
+O projeto começou como MVP de apresentação e agora está preparado para iniciar um piloto real com uma primeira marcenaria.
 
 ## Como abrir
 
@@ -11,6 +13,15 @@ python3 -m http.server 4173
 ```
 
 Depois acesse `http://localhost:4173`.
+
+## Estado atual
+
+- MVP visual funcional.
+- Repositório publicado no GitHub.
+- Documentação de piloto criada.
+- Estrutura Supabase preparada para banco real.
+- Configuração Netlify adicionada.
+- Roadmap SaaS definido.
 
 ## O que está implementado
 
@@ -24,7 +35,39 @@ Depois acesse `http://localhost:4173`.
 - Organização simulada de Drive: `Projetos / Nº - Cliente / Etapa / Ambiente`.
 - Persistência local no navegador via `localStorage`.
 
-## Tabelas para Google Sheets
+## Próximo passo operacional
+
+Para operar com o primeiro cliente real, siga:
+
+1. Leia `docs/OPERACAO_PILOTO_REAL.md`.
+2. Preencha `data/projetos_piloto_template.csv` com 3 a 5 projetos reais.
+3. Crie o projeto Supabase.
+4. Rode os scripts em `supabase/`.
+5. Cadastre usuários reais.
+6. Publique no Netlify.
+7. Acompanhe o uso por uma semana.
+
+## Arquitetura recomendada para piloto real
+
+- Frontend: webapp atual, evoluindo para integração real.
+- Banco: Supabase Postgres.
+- Login: Supabase Auth.
+- Permissões: Supabase Row Level Security.
+- Arquivos: Supabase Storage ou Google Drive integrado.
+- Deploy: Netlify.
+
+## Documentos principais
+
+- `PILOTO_CLIENTE_MARCENARIA.md`: documento executivo para apresentar o piloto.
+- `docs/OPERACAO_PILOTO_REAL.md`: plano de operação no cliente real.
+- `docs/ROADMAP_SAAS.md`: evolução do piloto até SaaS comercial.
+- `docs/BACKLOG_TECNICO.md`: fila técnica de implementação.
+- `supabase/001_schema.sql`: tabelas e tipos do banco.
+- `supabase/002_rls.sql`: políticas de acesso por perfil.
+- `supabase/003_storage.sql`: bucket de arquivos.
+- `supabase/004_seed_pilot.sql`: seed inicial.
+
+## Tabelas antigas para Google Sheets
 
 ### PROJETOS
 
