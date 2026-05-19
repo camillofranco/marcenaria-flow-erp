@@ -6,7 +6,7 @@ Este protótipo é um webapp estático: basta hospedar os arquivos `index.html`,
 
 Site publicado para o piloto:
 
-`https://endearing-cajeta-68549c.netlify.app`
+`https://marcenariaflow.netlify.app`
 
 1. Acesse `https://app.netlify.com/drop`.
 2. Arraste a pasta do projeto ou o arquivo `.zip`.

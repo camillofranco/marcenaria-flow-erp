@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Marcenaria Flow ERP</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=20260519-2" />
   </head>
   <body>
     <div class="app-shell">
@@ -18,15 +18,18 @@
         </div>
 
         <div class="role-switcher">
-          <label for="roleSelect">Perfil ativo</label>
+          <label for="roleSelect">Modo de visualização</label>
           <select id="roleSelect" data-role-select>
             <option value="adm">Administrador</option>
             <option value="medidor">Medidor</option>
             <option value="projetista">Projetista</option>
             <option value="comprador">Comprador</option>
             <option value="montador">Montador</option>
+            <option value="cliente">Cliente</option>
           </select>
-          <small id="userEmail">adm@marcenariaflow.com</small>
+          <label for="personSelect" class="person-label">Pessoa vinculada</label>
+          <select id="personSelect"></select>
+          <small id="userEmail">Cadastre pessoas reais para simular permissões.</small>
         </div>
 
         <nav class="nav-list">
@@ -35,6 +38,9 @@
           </button>
           <button class="nav-item" data-view="projects" type="button">
             <span aria-hidden="true">▦</span> Projetos
+          </button>
+          <button class="nav-item" data-view="people" type="button">
+            <span aria-hidden="true">◉</span> Pessoas
           </button>
           <button class="nav-item" data-view="purchases" type="button">
             <span aria-hidden="true">□</span> Compras
@@ -61,6 +67,8 @@
             </label>
             <button class="secondary-action" id="exportDataBtn" type="button">Exportar</button>
             <button class="secondary-action" id="importDataBtn" type="button">Importar</button>
+            <button class="secondary-action" id="tourBtn" type="button">Tour</button>
+            <button class="secondary-action" id="newPersonBtn" type="button">Nova pessoa</button>
             <input id="importDataInput" type="file" accept="application/json" hidden />
             <button class="primary-action" id="newProjectBtn" type="button">Novo projeto</button>
           </div>
@@ -120,24 +128,23 @@
           </label>
           <label>
             Medidor
-            <select name="medidor">
-              <option>Rafael</option>
-              <option>Bianca</option>
-            </select>
+            <select name="medidor"></select>
           </label>
           <label>
             Projetista
-            <select name="projetista">
-              <option>Camila</option>
-              <option>Diego</option>
-            </select>
+            <select name="projetista"></select>
+          </label>
+          <label>
+            Comprador
+            <select name="comprador"></select>
           </label>
           <label>
             Montador
-            <select name="montador">
-              <option>João</option>
-              <option>Marcos</option>
-            </select>
+            <select name="montador"></select>
+          </label>
+          <label class="wide">
+            Cliente com acesso ao app
+            <select name="clienteUser"></select>
           </label>
           <label class="wide">
             Ambientes
@@ -151,6 +158,65 @@
       </form>
     </dialog>
 
-    <script src="./app.js"></script>
+    <dialog id="personDialog" class="modal">
+      <form method="dialog" class="modal-body" id="personForm">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Cadastro ADM</p>
+            <h2>Nova pessoa</h2>
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">×</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            Nome
+            <input name="name" required placeholder="Nome da pessoa" />
+          </label>
+          <label>
+            E-mail
+            <input name="email" type="email" placeholder="email@empresa.com" />
+          </label>
+          <label>
+            Perfil
+            <select name="role">
+              <option value="adm">Administrador</option>
+              <option value="medidor">Medidor</option>
+              <option value="projetista">Projetista</option>
+              <option value="comprador">Comprador</option>
+              <option value="montador">Montador</option>
+              <option value="cliente">Cliente</option>
+            </select>
+          </label>
+          <label>
+            Telefone
+            <input name="phone" placeholder="Opcional" />
+          </label>
+        </div>
+        <menu class="modal-actions">
+          <button class="secondary-action" value="cancel" type="submit">Cancelar</button>
+          <button class="primary-action" value="default" type="submit">Salvar pessoa</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="tourDialog" class="modal tour-modal">
+      <div class="modal-body">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow" id="tourRole">Tour</p>
+            <h2 id="tourTitle">Bem-vindo</h2>
+          </div>
+          <button class="icon-button" id="tourCloseBtn" aria-label="Fechar" type="button">×</button>
+        </div>
+        <p id="tourText"></p>
+        <div class="tour-progress" id="tourProgress"></div>
+        <menu class="modal-actions">
+          <button class="secondary-action" id="tourPrevBtn" type="button">Voltar</button>
+          <button class="primary-action" id="tourNextBtn" type="button">Próximo</button>
+        </menu>
+      </div>
+    </dialog>
+
+    <script src="./app.js?v=20260519-2"></script>
   </body>
 </html>

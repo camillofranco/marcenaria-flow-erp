@@ -105,6 +105,10 @@ button {
   margin-bottom: 8px;
 }
 
+.role-switcher .person-label {
+  margin-top: 12px;
+}
+
 .role-switcher select,
 .search-box input,
 .modal input,
@@ -188,12 +192,15 @@ h2 {
 
 .topbar-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+  justify-content: flex-end;
+  max-width: 640px;
 }
 
 .search-box {
-  width: min(360px, 40vw);
+  width: min(260px, 28vw);
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -221,7 +228,7 @@ h2 {
   border: 1px solid transparent;
   border-radius: 8px;
   min-height: 40px;
-  padding: 0 14px;
+  padding: 0 10px;
 }
 
 .primary-action {
@@ -494,6 +501,26 @@ h2 {
   grid-template-columns: 1fr;
 }
 
+.people-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.person-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.person-card strong,
+.person-card span {
+  display: block;
+}
+
 .file-row {
   margin-top: 10px;
 }
@@ -559,6 +586,27 @@ h2 {
   justify-content: flex-end;
   padding: 0;
   margin: 0;
+}
+
+.tour-modal {
+  width: min(620px, calc(100vw - 28px));
+}
+
+.tour-progress {
+  display: flex;
+  gap: 6px;
+  margin: 18px 0;
+}
+
+.tour-dot {
+  height: 8px;
+  flex: 1;
+  border-radius: 999px;
+  background: #e4ded2;
+}
+
+.tour-dot.active {
+  background: var(--accent);
 }
 
 @media (max-width: 1080px) {

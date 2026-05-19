@@ -1,130 +1,53 @@
 const roleProfiles = {
   adm: {
     label: "Administrador",
-    email: "adm@marcenariaflow.com",
     title: "Painel de controle",
     subtitle: "Projetos, compras, responsáveis e alertas de assistência.",
   },
   medidor: {
     label: "Medidor",
-    email: "rafael@marcenariaflow.com",
     title: "Medições agendadas",
     subtitle: "Clientes atribuídos, fotos por ambiente e pastas de medição.",
   },
   projetista: {
     label: "Projetista",
-    email: "camila@marcenariaflow.com",
     title: "Desenvolvimento técnico",
     subtitle: "Ambientes liberados, checklists e pedidos de compra.",
   },
   comprador: {
     label: "Comprador",
-    email: "suprimentos@marcenariaflow.com",
     title: "Suprimentos aprovados",
     subtitle: "Materiais aprovados, compra, entrega e faturas.",
   },
   montador: {
     label: "Montador",
-    email: "joao@marcenariaflow.com",
     title: "Roteiro de montagem",
     subtitle: "Rotas, ficheiros de obra, alertas e checklist.",
   },
+  cliente: {
+    label: "Cliente",
+    title: "Acompanhamento da obra",
+    subtitle: "Status do projeto, previsão de montagem, arquivos liberados e pendências.",
+  },
 };
 
-const initialProjects = [
-  {
-    id: "p-001",
-    number: "MF-2401",
-    client: "Ana Martins",
-    address: "Rua das Acácias, 212 - Campinas, SP",
-    installDate: "2026-06-02",
-    status: "desenvolvimento",
-    medidor: "Rafael",
-    projetista: "Camila",
-    comprador: "Larissa",
-    montador: "João",
-    startedAt: "2026-05-18 09:12",
-    rooms: [
-      { name: "Cozinha", measurementPhotos: 8, designDone: true, installDone: false, supportNote: "" },
-      { name: "Lavanderia", measurementPhotos: 5, designDone: false, installDone: false, supportNote: "" },
-      { name: "Cristaleira", measurementPhotos: 4, designDone: false, installDone: false, supportNote: "" },
-    ],
-    purchases: [
-      { id: "c-01", item: "Perfil LED 3000K", qty: "12 m", requestedBy: "Camila", approval: "pendente", purchaseStatus: "aguardando", invoice: "" },
-      { id: "c-02", item: "Dobradiça Blum clip top", qty: "22 un.", requestedBy: "Camila", approval: "aprovado", purchaseStatus: "comprado", invoice: "NF-9812.pdf" },
-    ],
-    alerts: [
-      { level: "critical", title: "Canos de gás na parede da torre quente", source: "ADM" },
-      { level: "attention", title: "Tomada deslocada na bancada", source: "Projetista" },
-    ],
-    files: {
-      medicao: ["Cozinha 01.jpg", "Cozinha 02.jpg", "Lavanderia 01.jpg"],
-      engenharia: ["Fabrica_MF-2401.plano", "Plano_de_corte.pdf"],
-      obra: ["Obra_MF-2401.pdf", "Perspectivas_Cliente.pdf"],
-    },
-  },
-  {
-    id: "p-002",
-    number: "MF-2402",
-    client: "Bruno Almeida",
-    address: "Av. Brasil, 1640 - Valinhos, SP",
-    installDate: "2026-05-27",
-    status: "medicao",
-    medidor: "Rafael",
-    projetista: "Diego",
-    comprador: "Larissa",
-    montador: "Marcos",
-    startedAt: "",
-    rooms: [
-      { name: "Quarto casal", measurementPhotos: 0, designDone: false, installDone: false, supportNote: "" },
-      { name: "Home office", measurementPhotos: 0, designDone: false, installDone: false, supportNote: "" },
-    ],
-    purchases: [],
-    alerts: [{ level: "info", title: "Cliente pediu puxador cava em todo o projeto", source: "ADM" }],
-    files: { medicao: [], engenharia: [], obra: [] },
-  },
-  {
-    id: "p-003",
-    number: "MF-2398",
-    client: "Clínica Sorriso",
-    address: "Rua Padre Vieira, 905 - Campinas, SP",
-    installDate: "2026-05-21",
-    status: "montagem",
-    medidor: "Bianca",
-    projetista: "Camila",
-    comprador: "Larissa",
-    montador: "João",
-    startedAt: "2026-05-12 13:40",
-    rooms: [
-      { name: "Recepção", measurementPhotos: 7, designDone: true, installDone: true, supportNote: "" },
-      { name: "Consultório 1", measurementPhotos: 6, designDone: true, installDone: false, supportNote: "Falta lateral direita do armário aéreo." },
-      { name: "Esterilização", measurementPhotos: 5, designDone: true, installDone: false, supportNote: "" },
-    ],
-    purchases: [
-      { id: "c-03", item: "Corrediça telescópica 45 cm", qty: "18 pares", requestedBy: "Camila", approval: "aprovado", purchaseStatus: "entregue", invoice: "NF-9741.pdf" },
-    ],
-    alerts: [
-      { level: "critical", title: "Parede de drywall não suporta módulo suspenso sem reforço", source: "Projetista" },
-      { level: "attention", title: "Montar fora do horário de atendimento", source: "ADM" },
-    ],
-    files: {
-      medicao: ["Recepcao 01.jpg", "Consultorio 01.jpg"],
-      engenharia: ["Fabrica_MF-2398.plano"],
-      obra: ["Obra_MF-2398.pdf", "Mapa_de_modulos.pdf"],
-    },
-  },
-];
+const STORAGE_KEY = "marcenaria-flow-pilot-v2";
 
 const state = {
   role: "adm",
   view: "dashboard",
   statusFilter: "todos",
-  selectedProjectId: "p-001",
+  selectedProjectId: "",
+  activePersonId: "",
   search: "",
-  projects: loadProjects(),
+  projects: [],
+  people: [],
 };
 
+Object.assign(state, loadPilotData());
+
 const roleSelect = document.querySelector("[data-role-select]");
+const personSelect = document.querySelector("#personSelect");
 const userEmail = document.querySelector("#userEmail");
 const roleLabel = document.querySelector("#roleLabel");
 const pageTitle = document.querySelector("#pageTitle");
@@ -137,15 +60,31 @@ const searchInput = document.querySelector("#searchInput");
 const toast = document.querySelector("#toast");
 const dialog = document.querySelector("#projectDialog");
 const projectForm = document.querySelector("#projectForm");
+const personDialog = document.querySelector("#personDialog");
+const personForm = document.querySelector("#personForm");
+const tourDialog = document.querySelector("#tourDialog");
+const tourRole = document.querySelector("#tourRole");
+const tourTitle = document.querySelector("#tourTitle");
+const tourText = document.querySelector("#tourText");
+const tourProgress = document.querySelector("#tourProgress");
+const tourCloseBtn = document.querySelector("#tourCloseBtn");
+const tourPrevBtn = document.querySelector("#tourPrevBtn");
+const tourNextBtn = document.querySelector("#tourNextBtn");
 const newProjectBtn = document.querySelector("#newProjectBtn");
+const newPersonBtn = document.querySelector("#newPersonBtn");
+const tourBtn = document.querySelector("#tourBtn");
 const exportDataBtn = document.querySelector("#exportDataBtn");
 const importDataBtn = document.querySelector("#importDataBtn");
 const importDataInput = document.querySelector("#importDataInput");
 
 const statusLabels = {
+  abertura: "Abertura",
   medicao: "Medição técnica",
   desenvolvimento: "Em desenvolvimento",
+  compras: "Compras",
+  fabrica: "Fábrica",
   montagem: "Montagem",
+  assistencia: "Assistência",
   concluido: "Concluído",
 };
 
@@ -155,16 +94,68 @@ const alertLabels = {
   info: "Informativo",
 };
 
+let tourIndex = 0;
+
+const tourSteps = {
+  adm: [
+    ["Visão geral", "Aqui o ADM acompanha todos os projetos, responsáveis, compras pendentes, alertas e assistências abertas."],
+    ["Pessoas reais", "Comece cadastrando medidor, projetista, comprador, montador e clientes em Nova pessoa."],
+    ["Abertura do projeto", "Depois clique em Novo projeto para informar cliente, endereço, data, responsáveis e ambientes."],
+    ["Piloto seguro", "Durante esta fase os dados ficam no navegador. Use Exportar ao fim do dia para gerar backup."],
+  ],
+  medidor: [
+    ["Projetos atribuídos", "O medidor visualiza os projetos vinculados à pessoa selecionada neste perfil."],
+    ["Medição por ambiente", "Entre no projeto, confira os ambientes e use Abrir câmera para simular fotos por ambiente."],
+    ["Liberação", "Ao finalizar, use Liberar projeto para mover o fluxo ao projetista."],
+  ],
+  projetista: [
+    ["Start do projeto", "Use Start para registrar o início do desenvolvimento e sinalizar ao ADM."],
+    ["Checklist técnico", "Marque os ambientes concluídos e registre solicitações de compra quando houver materiais especiais."],
+    ["Arquivos", "Use Anexar ficheiros para simular envio de arquivo de fábrica e arquivo de obra."],
+  ],
+  comprador: [
+    ["Compras aprovadas", "O comprador acompanha itens aprovados pelo ADM e atualiza o andamento da compra."],
+    ["Comprovantes", "Use Anexar fatura para simular registro de nota fiscal ou comprovante."],
+  ],
+  montador: [
+    ["Obra no celular", "O montador consulta rota, arquivos da obra, alertas críticos e checklist por ambiente."],
+    ["Pendências", "Ao relatar pendência, o sistema cria alerta vermelho para o ADM tratar assistência ou reposição."],
+  ],
+  cliente: [
+    ["Acompanhamento", "O cliente acompanha status, previsão de montagem, ambientes e arquivos liberados para visualização."],
+    ["Transparência", "Este perfil não mostra compras internas nem arquivos de engenharia; mostra somente o que interessa ao cliente."],
+  ],
+};
+
+function activePerson() {
+  return state.people.find((person) => person.id === state.activePersonId);
+}
+
+function personName(id) {
+  return state.people.find((person) => person.id === id)?.name || "Sem responsável";
+}
+
+function peopleByRole(role) {
+  return state.people.filter((person) => person.role === role);
+}
+
+function roleMatches(project) {
+  const person = activePerson();
+  if (state.role === "adm") return true;
+  if (!person) return false;
+  return {
+    medidor: project.medidorId === person.id,
+    projetista: project.projetistaId === person.id,
+    comprador: project.compradorId === person.id && project.purchases.some((item) => item.approval === "aprovado"),
+    montador: project.montadorId === person.id,
+    cliente: project.clienteUserId === person.id,
+  }[state.role];
+}
+
 function filteredProjects() {
   const query = state.search.trim().toLowerCase();
   return state.projects.filter((project) => {
-    const canSee = {
-      adm: true,
-      medidor: project.medidor === "Rafael" && project.status === "medicao",
-      projetista: project.projetista === "Camila" && ["desenvolvimento", "montagem"].includes(project.status),
-      comprador: project.purchases.some((item) => item.approval === "aprovado"),
-      montador: project.montador === "João" && project.status === "montagem",
-    }[state.role];
+    const canSee = roleMatches(project);
     const statusMatch = state.statusFilter === "todos" || project.status === state.statusFilter;
     const textMatch = [project.number, project.client, project.address].join(" ").toLowerCase().includes(query);
     return canSee && statusMatch && textMatch;
@@ -180,24 +171,38 @@ function showToast(message) {
   }, 3200);
 }
 
-function loadProjects() {
+function loadPilotData() {
   try {
-    return JSON.parse(localStorage.getItem("marcenaria-flow-projects")) || structuredClone(initialProjects);
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    return {
+      projects: Array.isArray(data?.projects) ? data.projects : [],
+      people: Array.isArray(data?.people) ? data.people : [],
+      activePersonId: data?.activePersonId || "",
+    };
   } catch {
-    return structuredClone(initialProjects);
+    return { projects: [], people: [], activePersonId: "" };
   }
 }
 
-function persistProjects() {
-  localStorage.setItem("marcenaria-flow-projects", JSON.stringify(state.projects));
+function persistPilotData() {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      version: 2,
+      projects: state.projects,
+      people: state.people,
+      activePersonId: state.activePersonId,
+    }),
+  );
 }
 
 function exportPilotData() {
   const payload = {
     app: "Marcenaria Flow ERP",
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     projects: state.projects,
+    people: state.people,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -217,10 +222,13 @@ function importPilotData(file) {
     try {
       const payload = JSON.parse(reader.result);
       const projects = Array.isArray(payload) ? payload : payload.projects;
+      const people = Array.isArray(payload.people) ? payload.people : [];
       if (!Array.isArray(projects)) throw new Error("Arquivo sem lista de projetos.");
       state.projects = projects;
+      state.people = people;
       state.selectedProjectId = projects[0]?.id ?? "";
-      persistProjects();
+      persistPilotData();
+      renderPersonSelect();
       renderProjects();
       showToast("Dados importados com sucesso neste navegador.");
     } catch {
@@ -260,6 +268,129 @@ function renderMetrics(projects) {
     .join("");
 }
 
+function renderPersonSelect() {
+  const candidates = peopleByRole(state.role);
+  if (!candidates.some((person) => person.id === state.activePersonId)) {
+    state.activePersonId = candidates[0]?.id ?? "";
+  }
+
+  personSelect.disabled = state.role === "adm" || candidates.length === 0;
+  personSelect.innerHTML =
+    state.role === "adm"
+      ? `<option value="">Visão geral ADM</option>`
+      : candidates.length
+        ? candidates.map((person) => `<option value="${person.id}">${person.name}</option>`).join("")
+        : `<option value="">Cadastre uma pessoa ${roleProfiles[state.role].label.toLowerCase()}</option>`;
+  personSelect.value = state.activePersonId;
+
+  const person = activePerson();
+  userEmail.textContent = person
+    ? [person.email, person.phone].filter(Boolean).join(" · ")
+    : state.role === "adm"
+      ? "Administrador visualiza todos os dados cadastrados neste navegador."
+      : "Cadastre pessoas reais para simular permissões.";
+}
+
+function fillRoleSelect(select, role, selectedId = "") {
+  const people = peopleByRole(role);
+  select.innerHTML =
+    `<option value="">Sem cadastro ainda</option>` +
+    people.map((person) => `<option value="${person.id}" ${person.id === selectedId ? "selected" : ""}>${person.name}</option>`).join("");
+}
+
+function populateProjectFormPeople() {
+  fillRoleSelect(projectForm.elements.medidor, "medidor");
+  fillRoleSelect(projectForm.elements.projetista, "projetista");
+  fillRoleSelect(projectForm.elements.comprador, "comprador");
+  fillRoleSelect(projectForm.elements.montador, "montador");
+  fillRoleSelect(projectForm.elements.clienteUser, "cliente");
+}
+
+function renderPeople() {
+  renderMetrics(filteredProjects());
+  const grouped = Object.keys(roleProfiles)
+    .map((role) => {
+      const people = peopleByRole(role);
+      return `
+        <section class="detail-block">
+          <h3>${roleProfiles[role].label}</h3>
+          <div class="people-grid">
+            ${
+              people.length
+                ? people
+                    .map(
+                      (person) => `
+                        <article class="person-card">
+                          <div>
+                            <strong>${person.name}</strong>
+                            <span class="meta">${person.email || "E-mail não informado"}</span>
+                          </div>
+                          <span class="tag">${person.phone || "Sem telefone"}</span>
+                        </article>
+                      `,
+                    )
+                    .join("")
+                : `<div class="empty-state">Nenhuma pessoa cadastrada neste perfil.</div>`
+            }
+          </div>
+        </section>
+      `;
+    })
+    .join("");
+  projectList.innerHTML = grouped;
+  detailPanel.innerHTML = `
+    <p class="eyebrow">Cadastro</p>
+    <h2>Pessoas do piloto</h2>
+    <p class="meta">Cadastre a equipe real da marcenaria e os clientes que acompanharão projetos. Depois vincule essas pessoas no Novo projeto.</p>
+    <div class="action-row">
+      <button class="primary-action" data-open-person type="button">Nova pessoa</button>
+    </div>
+  `;
+  detailPanel.querySelector("[data-open-person]").addEventListener("click", () => personDialog.showModal());
+}
+
+function openTour() {
+  tourIndex = 0;
+  renderTour();
+  tourDialog.showModal();
+}
+
+function renderTour() {
+  const steps = tourSteps[state.role] || tourSteps.adm;
+  const [title, text] = steps[tourIndex];
+  tourRole.textContent = `Tour ${roleProfiles[state.role].label}`;
+  tourTitle.textContent = title;
+  tourText.textContent = text;
+  tourProgress.innerHTML = steps
+    .map((_, index) => `<span class="tour-dot ${index === tourIndex ? "active" : ""}"></span>`)
+    .join("");
+  tourPrevBtn.disabled = tourIndex === 0;
+  tourNextBtn.textContent = tourIndex === steps.length - 1 ? "Concluir" : "Próximo";
+}
+
+function nextTourStep() {
+  const steps = tourSteps[state.role] || tourSteps.adm;
+  if (tourIndex === steps.length - 1) {
+    localStorage.setItem(`marcenaria-flow-tour-${state.role}`, "done");
+    tourDialog.close();
+    return;
+  }
+  tourIndex += 1;
+  renderTour();
+}
+
+function previousTourStep() {
+  if (tourIndex === 0) return;
+  tourIndex -= 1;
+  renderTour();
+}
+
+function maybeOpenFirstAccessTour() {
+  if (!localStorage.getItem(`marcenaria-flow-tour-${state.role}`)) {
+    window.setTimeout(openTour, 450);
+  }
+}
+
 function renderProjects() {
   const projects = filteredProjects();
   renderMetrics(projects);
@@ -269,8 +400,12 @@ function renderProjects() {
   }
 
   if (!projects.length) {
-    projectList.innerHTML = `<div class="empty-state">Nenhum card aparece para este perfil com os filtros atuais.</div>`;
-    detailPanel.innerHTML = `<div class="empty-state">Selecione outro perfil ou ajuste a busca para ver detalhes.</div>`;
+    projectList.innerHTML = `
+      <div class="empty-state">
+        Nenhum projeto encontrado para este perfil. Cadastre pessoas reais e crie o primeiro projeto do piloto.
+      </div>
+    `;
+    detailPanel.innerHTML = `<div class="empty-state">Use Nova pessoa e Novo projeto para iniciar o piloto com dados reais.</div>`;
     return;
   }
 
@@ -283,9 +418,9 @@ function renderProjects() {
           <p class="meta">${project.address}</p>
           <div class="project-tags">
             <span class="tag">Montagem ${formatDate(project.installDate)}</span>
-            <span class="tag">Medidor ${project.medidor}</span>
-            <span class="tag">Projetista ${project.projetista}</span>
-            <span class="tag">Montador ${project.montador}</span>
+            <span class="tag">Medidor ${personName(project.medidorId)}</span>
+            <span class="tag">Projetista ${personName(project.projetistaId)}</span>
+            <span class="tag">Montador ${personName(project.montadorId)}</span>
           </div>
         </div>
         <div>
@@ -320,7 +455,7 @@ function renderDetail() {
       </div>
     </div>
     ${renderRooms(project)}
-    ${renderPurchases(project)}
+    ${state.role === "cliente" ? "" : renderPurchases(project)}
     ${renderAlerts(project)}
     ${renderDrive(project)}
   `;
@@ -362,8 +497,12 @@ function roleActionButtons(project) {
       <a class="primary-action link-button" href="${mapsUrl}" target="_blank" rel="noreferrer">Abrir rota</a>
       <button class="secondary-action" data-action="reportIssue" type="button">Relatar pendência</button>
     `,
+    cliente: `
+      <span class="tag">Status: ${statusLabels[project.status] ?? project.status}</span>
+      <span class="tag">Montagem ${formatDate(project.installDate)}</span>
+    `,
   };
-  return actions[state.role];
+  return actions[state.role] || "";
 }
 
 function renderRooms(project) {
@@ -409,7 +548,7 @@ function renderPurchases(project) {
         <article class="purchase-item">
           <div>
             <strong>${item.item}</strong>
-            <span class="meta">${item.qty} · ${item.requestedBy}</span>
+            <span class="meta">${item.qty} · ${personName(item.requestedById)}</span>
           </div>
           <div class="project-tags">
             <span class="tag">${item.approval}</span>
@@ -523,7 +662,7 @@ function handleAction(action, projectId) {
       id: `c-${Date.now()}`,
       item: "Ferragem especial sob medida",
       qty: "1 kit",
-      requestedBy: "Camila",
+      requestedById: activePerson()?.id || "",
       approval: "pendente",
       purchaseStatus: "aguardando",
       invoice: "",
@@ -558,7 +697,7 @@ function handleAction(action, projectId) {
     showToast("Pendência enviada ao ADM com alerta vermelho imediato.");
   }
 
-  persistProjects();
+  persistPilotData();
   renderProjects();
 }
 
@@ -566,7 +705,7 @@ function updateRoomCheck(projectId, roomName, key, checked) {
   const room = findRoom(projectId, roomName);
   if (!room) return;
   room[key] = checked;
-  persistProjects();
+  persistPilotData();
   showToast(key === "designDone" ? "Checklist do projetista atualizado." : "Checklist de montagem atualizado.");
 }
 
@@ -579,7 +718,7 @@ function updateSupportNote(projectId, roomName, value) {
     project.alerts.unshift({ level: "critical", title: `Assistência aberta em ${roomName}`, source: "Montador" });
     showToast("Nota registrada e alerta vermelho enviado ao ADM.");
   }
-  persistProjects();
+  persistPilotData();
   renderProjects();
 }
 
@@ -602,23 +741,36 @@ function setView(view) {
   const labels = {
     dashboard: ["Projetos em andamento", roleProfiles[state.role].subtitle],
     projects: ["Projetos", "Responsáveis, ambientes, datas e status geral."],
+    people: ["Pessoas", "Equipe, clientes e permissões que serão usadas no piloto."],
     purchases: ["Compras", "Materiais, aprovação, compra, entrega e faturas."],
     alerts: ["Alertas", "Ocorrências críticas, atenção e informações de obra."],
     drive: ["Drive", "Pastas por projeto, cliente, etapa e ambiente."],
   };
   [mainPanelTitle.textContent, mainPanelSubtitle.textContent] = labels[view];
+  if (view === "people") {
+    renderPeople();
+    return;
+  }
   renderProjects();
 }
 
 roleSelect.addEventListener("change", () => {
   state.role = roleSelect.value;
   const profile = roleProfiles[state.role];
-  userEmail.textContent = profile.email;
   roleLabel.textContent = profile.label;
   pageTitle.textContent = profile.title;
   document.body.dataset.role = state.role;
+  renderPersonSelect();
+  persistPilotData();
   showToast(`Filtro de acesso aplicado para ${profile.label}.`);
   setView(state.view);
+});
+
+personSelect.addEventListener("change", () => {
+  state.activePersonId = personSelect.value;
+  persistPilotData();
+  renderPersonSelect();
+  renderProjects();
 });
 
 document.querySelectorAll(".nav-item").forEach((button) => {
@@ -639,7 +791,12 @@ searchInput.addEventListener("input", () => {
 });
 
 newProjectBtn.addEventListener("click", () => {
+  populateProjectFormPeople();
   dialog.showModal();
+});
+
+newPersonBtn.addEventListener("click", () => {
+  personDialog.showModal();
 });
 
 exportDataBtn.addEventListener("click", exportPilotData);
@@ -653,6 +810,11 @@ importDataInput.addEventListener("change", () => {
   if (file) importPilotData(file);
   importDataInput.value = "";
 });
+
+tourBtn.addEventListener("click", openTour);
+tourCloseBtn.addEventListener("click", () => tourDialog.close());
+tourNextBtn.addEventListener("click", nextTourStep);
+tourPrevBtn.addEventListener("click", previousTourStep);
 
 projectForm.addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;
@@ -668,10 +830,11 @@ projectForm.addEventListener("submit", (event) => {
     address: formData.get("address"),
     installDate: formData.get("installDate"),
     status: "medicao",
-    medidor: formData.get("medidor"),
-    projetista: formData.get("projetista"),
-    comprador: "Larissa",
-    montador: formData.get("montador"),
+    medidorId: formData.get("medidor"),
+    projetistaId: formData.get("projetista"),
+    compradorId: formData.get("comprador"),
+    montadorId: formData.get("montador"),
+    clienteUserId: formData.get("clienteUser"),
     startedAt: "",
     rooms: rooms.map((name) => ({ name, measurementPhotos: 0, designDone: false, installDone: false, supportNote: "" })),
     purchases: [],
@@ -681,9 +844,30 @@ projectForm.addEventListener("submit", (event) => {
   state.projects.unshift(project);
   state.selectedProjectId = project.id;
   projectForm.reset();
-  persistProjects();
+  persistPilotData();
   showToast("Card criado com ambientes e pastas-base do Drive.");
   renderProjects();
 });
 
+personForm.addEventListener("submit", (event) => {
+  if (event.submitter?.value === "cancel") return;
+  const formData = new FormData(personForm);
+  const person = {
+    id: `u-${Date.now()}`,
+    name: String(formData.get("name")).trim(),
+    email: String(formData.get("email")).trim(),
+    role: formData.get("role"),
+    phone: String(formData.get("phone")).trim(),
+  };
+  state.people.push(person);
+  if (person.role === state.role) state.activePersonId = person.id;
+  personForm.reset();
+  persistPilotData();
+  renderPersonSelect();
+  if (state.view === "people") renderPeople();
+  showToast("Pessoa cadastrada para o piloto.");
+});
+
+renderPersonSelect();
 renderProjects();
+maybeOpenFirstAccessTour();

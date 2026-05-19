@@ -18,7 +18,7 @@ Depois acesse `http://localhost:4173`.
 
 - MVP visual funcional.
 - Repositório publicado no GitHub.
-- Deploy público no Netlify: `https://endearing-cajeta-68549c.netlify.app`.
+- Deploy público no Netlify: `https://marcenariaflow.netlify.app`.
 - Documentação de piloto criada.
 - Estrutura Supabase preparada para banco real.
 - Configuração Netlify adicionada.
