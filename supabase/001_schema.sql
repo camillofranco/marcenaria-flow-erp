@@ -8,7 +8,8 @@ create type public.user_role as enum (
   'medidor',
   'projetista',
   'comprador',
-  'montador'
+  'montador',
+  'cliente'
 );
 
 create type public.project_status as enum (
@@ -59,6 +60,7 @@ create table public.profiles (
   full_name text not null,
   email text not null,
   role public.user_role not null,
+  platform_admin boolean not null default false,
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -78,6 +80,7 @@ create table public.projects (
   projetista_id uuid references public.profiles(id),
   comprador_id uuid references public.profiles(id),
   montador_id uuid references public.profiles(id),
+  cliente_id uuid references public.profiles(id),
   started_design_at timestamptz,
   notes text,
   created_by uuid references public.profiles(id),
@@ -199,4 +202,3 @@ for each row execute function public.touch_updated_at();
 create trigger alerts_touch_updated_at
 before update on public.alerts
 for each row execute function public.touch_updated_at();
-

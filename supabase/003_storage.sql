@@ -12,7 +12,10 @@ for select
 using (
   bucket_id = 'project-files'
   and auth.role() = 'authenticated'
-  and (storage.foldername(name))[1] = public.current_company_id()::text
+  and (
+    public.is_platform_admin()
+    or (storage.foldername(name))[1] = public.current_company_id()::text
+  )
 );
 
 create policy "project_files_authenticated_insert"
@@ -21,7 +24,10 @@ for insert
 with check (
   bucket_id = 'project-files'
   and auth.role() = 'authenticated'
-  and (storage.foldername(name))[1] = public.current_company_id()::text
+  and (
+    public.is_platform_admin()
+    or (storage.foldername(name))[1] = public.current_company_id()::text
+  )
 );
 
 create policy "project_files_authenticated_update"
@@ -30,12 +36,18 @@ for update
 using (
   bucket_id = 'project-files'
   and auth.role() = 'authenticated'
-  and (storage.foldername(name))[1] = public.current_company_id()::text
+  and (
+    public.is_platform_admin()
+    or (storage.foldername(name))[1] = public.current_company_id()::text
+  )
 )
 with check (
   bucket_id = 'project-files'
   and auth.role() = 'authenticated'
-  and (storage.foldername(name))[1] = public.current_company_id()::text
+  and (
+    public.is_platform_admin()
+    or (storage.foldername(name))[1] = public.current_company_id()::text
+  )
 );
 
 -- Padrão de caminho esperado:

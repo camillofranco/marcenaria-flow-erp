@@ -64,6 +64,7 @@ Para operar com o primeiro cliente real, siga:
 - `docs/OPERACAO_PILOTO_REAL.md`: plano de operação no cliente real.
 - `docs/ROADMAP_SAAS.md`: evolução do piloto até SaaS comercial.
 - `docs/BACKLOG_TECNICO.md`: fila técnica de implementação.
+- `docs/SUPABASE_BOOTSTRAP.md`: criação do platform admin, primeiro ADM real e acessos.
 - `supabase/001_schema.sql`: tabelas e tipos do banco.
 - `supabase/002_rls.sql`: políticas de acesso por perfil.
 - `supabase/003_storage.sql`: bucket de arquivos.
