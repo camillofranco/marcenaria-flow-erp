@@ -4,6 +4,10 @@ Este protótipo é um webapp estático: basta hospedar os arquivos `index.html`,
 
 ## Opção mais rápida: Netlify Drop
 
+Site publicado para o piloto:
+
+`https://endearing-cajeta-68549c.netlify.app`
+
 1. Acesse `https://app.netlify.com/drop`.
 2. Arraste a pasta do projeto ou o arquivo `.zip`.
 3. O Netlify gera um link público na hora.
@@ -33,4 +37,3 @@ Use este protótipo para validar telas e fluxo. Para uso real da marcenaria, o i
 - `styles.css`
 - `app.js`
 - `README.md` opcional
-

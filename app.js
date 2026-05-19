@@ -138,6 +138,9 @@ const toast = document.querySelector("#toast");
 const dialog = document.querySelector("#projectDialog");
 const projectForm = document.querySelector("#projectForm");
 const newProjectBtn = document.querySelector("#newProjectBtn");
+const exportDataBtn = document.querySelector("#exportDataBtn");
+const importDataBtn = document.querySelector("#importDataBtn");
+const importDataInput = document.querySelector("#importDataInput");
 
 const statusLabels = {
   medicao: "Medição técnica",
@@ -187,6 +190,44 @@ function loadProjects() {
 
 function persistProjects() {
   localStorage.setItem("marcenaria-flow-projects", JSON.stringify(state.projects));
+}
+
+function exportPilotData() {
+  const payload = {
+    app: "Marcenaria Flow ERP",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    projects: state.projects,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `marcenaria-flow-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showToast("Backup exportado. Guarde este arquivo para recuperar ou transportar os dados do piloto.");
+}
+
+function importPilotData(file) {
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const payload = JSON.parse(reader.result);
+      const projects = Array.isArray(payload) ? payload : payload.projects;
+      if (!Array.isArray(projects)) throw new Error("Arquivo sem lista de projetos.");
+      state.projects = projects;
+      state.selectedProjectId = projects[0]?.id ?? "";
+      persistProjects();
+      renderProjects();
+      showToast("Dados importados com sucesso neste navegador.");
+    } catch {
+      showToast("Não foi possível importar. Use um backup JSON exportado pelo Marcenaria Flow.");
+    }
+  });
+  reader.readAsText(file);
 }
 
 function renderMetrics(projects) {
@@ -599,6 +640,18 @@ searchInput.addEventListener("input", () => {
 
 newProjectBtn.addEventListener("click", () => {
   dialog.showModal();
+});
+
+exportDataBtn.addEventListener("click", exportPilotData);
+
+importDataBtn.addEventListener("click", () => {
+  importDataInput.click();
+});
+
+importDataInput.addEventListener("change", () => {
+  const [file] = importDataInput.files;
+  if (file) importPilotData(file);
+  importDataInput.value = "";
 });
 
 projectForm.addEventListener("submit", (event) => {

@@ -18,6 +18,7 @@ Depois acesse `http://localhost:4173`.
 
 - MVP visual funcional.
 - Repositório publicado no GitHub.
+- Deploy público no Netlify: `https://endearing-cajeta-68549c.netlify.app`.
 - Documentação de piloto criada.
 - Estrutura Supabase preparada para banco real.
 - Configuração Netlify adicionada.
@@ -34,6 +35,7 @@ Depois acesse `http://localhost:4173`.
 - Alertas por criticidade: crítico, atenção e informativo.
 - Organização simulada de Drive: `Projetos / Nº - Cliente / Etapa / Ambiente`.
 - Persistência local no navegador via `localStorage`.
+- Exportação/importação de backup JSON para transportar dados do piloto.
 
 ## Próximo passo operacional
 
