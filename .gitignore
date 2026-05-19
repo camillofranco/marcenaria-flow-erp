@@ -3,3 +3,4 @@ marcenaria-flow-erp.zip
 .env
 config.js
 .netlify/
+supabase/.temp/
