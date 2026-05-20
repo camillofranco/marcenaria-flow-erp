@@ -119,13 +119,14 @@ async function createProfile({ id, companyId, fullName, email, role, phone, plat
 
 function formatSupabaseAuthError(data) {
   const message = data.message || data.error_description || data.error || "";
-  if (/already|registered|exists|duplicate/i.test(message)) {
+  const searchable = `${message} ${JSON.stringify(data)}`;
+  if (/already|registered|exists|duplicate|email_exists|user_already_exists/i.test(searchable)) {
     return "Este e-mail já possui acesso cadastrado.";
   }
-  if (/password/i.test(message)) {
+  if (/password/i.test(searchable)) {
     return "A senha inicial não atende aos requisitos mínimos.";
   }
-  if (/email/i.test(message)) {
+  if (/email/i.test(searchable)) {
     return "Informe um e-mail válido para criar o acesso.";
   }
   return message || "Não foi possível criar o acesso no Supabase Auth.";
