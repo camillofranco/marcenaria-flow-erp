@@ -1,104 +1,287 @@
 # Marcenaria Flow ERP
 
-Webapp de gestão operacional para marcenarias, criado para controlar projetos do início ao fim: abertura, medição, desenvolvimento técnico, compras, fabricação, montagem e assistência.
+ERP web/mobile para marcenarias acompanharem projetos do inicio ao fim: abertura do projeto, medicao tecnica, desenvolvimento, compras, arquivos de obra, montagem, alertas e assistencia.
 
-O projeto começou como MVP de apresentação e agora está preparado para iniciar um piloto real com uma primeira marcenaria.
+O projeto esta em fase de piloto real com uma primeira marcenaria. A proposta atual e validar o fluxo operacional com usuarios reais antes de evoluir para um SaaS profissional.
 
-## Como abrir
+## URL De Producao
 
-Abra `index.html` no navegador ou rode um servidor local na pasta do projeto:
+Aplicacao publicada:
+
+https://marcenaria-flow-erp.vercel.app
+
+Repositorio:
+
+https://github.com/camillofranco/marcenaria-flow-erp
+
+## Objetivo Do Produto
+
+Centralizar a operacao de uma marcenaria em um unico portal, reduzindo informacao perdida em WhatsApp, fotos soltas, pedidos de compra sem rastreio e falhas de comunicacao entre medidor, projetista, comprador, montador, administrador e cliente final.
+
+O sistema foi desenhado para responder perguntas praticas do dia a dia:
+
+- Qual projeto esta em qual etapa?
+- Quem e o responsavel por cada fase?
+- Quais ambientes ja foram medidos, projetados ou montados?
+- Que compras foram solicitadas e aprovadas?
+- Quais alertas criticos a montagem precisa saber?
+- O cliente consegue acompanhar o andamento sem ver informacoes internas?
+- O ADM consegue identificar pendencias rapidamente?
+
+## Perfis De Acesso
+
+O sistema usa login real via Supabase Auth e aplica permissoes por perfil.
+
+### Administrador
+
+- Visualiza todos os dados da empresa.
+- Cria projetos.
+- Cadastra, altera e exclui usuarios.
+- Vincula responsaveis aos projetos.
+- Aprova compras.
+- Visualiza alertas e assistencias.
+- Pode validar o comportamento dos demais perfis durante o piloto.
+
+### Medidor
+
+- Visualiza apenas projetos em que esta vinculado.
+- Acompanha ambientes da obra.
+- Registra/simula fotos de medicao por ambiente.
+- Libera o projeto para desenvolvimento.
+
+### Projetista
+
+- Visualiza apenas projetos em que esta vinculado.
+- Inicia o desenvolvimento tecnico.
+- Marca checklist de ambientes concluidos.
+- Solicita materiais especiais para compra.
+- Registra/simula arquivos de engenharia e obra.
+
+### Comprador
+
+- Visualiza projetos vinculados ao seu usuario.
+- Acompanha itens aprovados pelo ADM.
+- Atualiza status de compra.
+- Registra/simula faturas e comprovantes.
+
+### Montador
+
+- Visualiza apenas obras em que esta vinculado.
+- Abre rota do endereco no Google Maps.
+- Consulta arquivos de obra.
+- Ve alertas criticos.
+- Marca checklist de montagem.
+- Relata pendencias e assistencias.
+
+### Cliente
+
+- Visualiza apenas projetos vinculados ao seu e-mail.
+- Acompanha status, previsao de montagem e arquivos liberados.
+- Nao acessa compras, alertas internos ou dados de gestao.
+
+## Fluxo Operacional
+
+1. O ADM cria o projeto com numero, cliente, endereco, data de montagem, ambientes e responsaveis.
+2. O medidor acessa o projeto vinculado e registra a medicao por ambiente.
+3. O projetista inicia o desenvolvimento, acompanha ambientes e solicita compras quando necessario.
+4. O ADM aprova ou controla as compras solicitadas.
+5. O comprador executa a compra e atualiza o status.
+6. O montador acessa rota, arquivos de obra, alertas e checklist.
+7. O cliente acompanha o andamento do projeto pelo proprio acesso.
+8. Pendencias de montagem geram alerta para o ADM.
+
+## Stack Tecnica
+
+- Frontend: HTML, CSS e JavaScript puro.
+- Auth: Supabase Auth.
+- Banco: Supabase Postgres.
+- Permissoes: Supabase Row Level Security.
+- API administrativa: Vercel Serverless Functions.
+- Deploy: Vercel.
+- Webapp/PWA: manifest, theme color, apple mobile tags e service worker basico.
+
+## Estrutura Do Projeto
+
+```text
+.
+├── index.html
+├── styles.css
+├── app.js
+├── manifest.webmanifest
+├── sw.js
+├── vercel.json
+├── api/
+│   ├── create-user.js
+│   └── manage-user.js
+├── assets/
+│   ├── favicon.png
+│   ├── flow-marcenaria-logo.png
+│   └── login-background.jpg
+├── docs/
+│   ├── BACKLOG_TECNICO.md
+│   ├── GUIA_RAPIDO_CLIENTE_PILOTO.md
+│   ├── OPERACAO_PILOTO_REAL.md
+│   ├── ROADMAP_SAAS.md
+│   ├── SUPABASE_BOOTSTRAP.md
+│   └── SUPABASE_PROJECT.md
+└── supabase/
+    ├── 001_schema.sql
+    ├── 002_rls.sql
+    ├── 003_storage.sql
+    ├── 004_seed_pilot.sql
+    └── 005_profiles_phone.sql
+```
+
+## Funcionalidades Implementadas
+
+- Login real com Supabase.
+- Tela de login profissional com imagem de fundo, logo e favicon.
+- Recuperacao de senha conectada ao Supabase Auth.
+- Alteracao de senha pelo usuario logado.
+- Perfis ADM, Medidor, Projetista, Comprador, Montador e Cliente.
+- Filtro de projetos por vinculo do usuario.
+- Cadastro real de usuarios pelo ADM.
+- Alteracao e exclusao/desativacao de usuarios pelo ADM.
+- Criacao de projetos pelo ADM.
+- Vinculo de medidor, projetista, comprador, montador e cliente ao projeto.
+- Cards de projetos por status.
+- Busca por projeto, cliente ou endereco.
+- Metricas operacionais.
+- Checklist de ambientes.
+- Lista de compras com aprovacao/status.
+- Alertas por criticidade.
+- Simulacao de estrutura de arquivos por projeto.
+- Tour guiado por perfil de usuario.
+- Layout responsivo mobile-first.
+- Instalacao como webapp/PWA.
+
+## Estado Do Piloto
+
+O sistema esta pronto para um piloto real controlado, com cliente testando:
+
+- Login e acesso por perfil.
+- Criacao de usuarios.
+- Criacao de projetos reais.
+- Vinculo de responsaveis.
+- Visualizacao por permissao.
+- Fluxo de medicao, projeto, compra e montagem.
+- Acompanhamento pelo cliente.
+- Experiencia mobile/webapp.
+
+O piloto ainda nao deve ser vendido como SaaS final. Ele deve ser apresentado como validacao operacional para colher feedback real da marcenaria.
+
+## Limitacoes Atuais
+
+- Upload real de arquivos ainda nao esta finalizado.
+- Fotos e arquivos estao representados no fluxo, mas ainda precisam de integracao definitiva com Supabase Storage ou Google Drive.
+- Notificacoes push/e-mail ainda nao estao implementadas como automacao completa.
+- Recuperacao de senha depende da configuracao correta de e-mail/SMTP e redirect URLs no Supabase.
+- Ainda nao ha painel financeiro completo para compras.
+- Ainda nao ha multiempresa comercial com onboarding self-service.
+
+## Proximos Passos Tecnicos
+
+1. Configurar URLs e e-mail transacional do Supabase Auth.
+2. Implementar upload real para Supabase Storage ou Google Drive.
+3. Criar automacoes de notificacao para ADM, comprador e montador.
+4. Criar fluxo de convite de usuarios por e-mail.
+5. Melhorar auditoria de eventos.
+6. Criar dashboard de saude do piloto.
+7. Evoluir multiempresa, planos e cobranca para SaaS.
+
+## Como Rodar Localmente
+
+Na raiz do projeto:
 
 ```bash
 python3 -m http.server 4173
 ```
 
-Depois acesse `http://localhost:4173`.
+Depois acesse:
 
-## Estado atual
+```text
+http://localhost:4173
+```
 
-- Piloto real publicado e conectado ao Supabase.
-- Repositório publicado no GitHub.
-- Deploy público no Vercel: `https://marcenaria-flow-erp.vercel.app`.
-- Documentação de piloto criada.
-- Supabase Auth ativo para login.
-- Supabase Postgres ativo para usuários, projetos, ambientes, compras, alertas e arquivos.
-- Row Level Security configurado por empresa e perfil.
-- Vercel Serverless Function criada para que apenas ADM cadastre acessos.
-- Roadmap SaaS definido.
+Observacao: algumas funcionalidades reais dependem do ambiente publicado ou das variaveis de ambiente da Vercel, especialmente APIs administrativas.
 
-## O que está implementado
+## Variaveis De Ambiente
 
-- Perfis: ADM, Medidor, Projetista, Comprador, Montador e Cliente.
-- Login real com Supabase Auth.
-- Filtro de acesso por perfil usando a sessão autenticada.
-- Cards de projetos com responsáveis, status, endereço, data de montagem e ambientes.
-- Checklists de projeto e montagem por ambiente.
-- Fotos de medição simuladas por ambiente.
-- Lista de compras com aprovação ADM e status de compra.
-- Alertas por criticidade: crítico, atenção e informativo.
-- Cadastro real de pessoas feito pelo ADM.
-- Organização de arquivos registrada por categoria: medição, engenharia e obra.
-- Login profissional sem modo demonstração na tela pública.
+Na Vercel, configure:
 
-## Próximo passo operacional
+```text
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+```
 
-Para operar com o primeiro cliente real, siga:
+Nunca versionar chaves sensiveis no repositorio.
 
-1. Leia `docs/OPERACAO_PILOTO_REAL.md`.
-2. Preencha `data/projetos_piloto_template.csv` com 3 a 5 projetos reais.
-3. Entre no app publicado com o usuário técnico/ADM.
-4. Cadastre o primeiro ADM real da marcenaria.
-5. Cadastre a equipe e os clientes com acesso.
-6. Crie 3 a 5 projetos reais.
-7. Acompanhe o uso por uma semana.
+## Deploy
 
-## Arquitetura recomendada para piloto real
+Deploy manual:
 
-- Frontend: webapp estático preparado para Vercel.
-- Banco: Supabase Postgres.
-- Login: Supabase Auth.
-- Permissões: Supabase Row Level Security.
-- Arquivos: Supabase Storage ou Google Drive integrado.
-- Deploy: Vercel.
+```bash
+npx vercel --prod --yes
+```
 
-## Documentos principais
+Arquivos relevantes:
 
-- `PILOTO_CLIENTE_MARCENARIA.md`: documento executivo para apresentar o piloto.
-- `docs/OPERACAO_PILOTO_REAL.md`: plano de operação no cliente real.
-- `docs/ROADMAP_SAAS.md`: evolução do piloto até SaaS comercial.
-- `docs/BACKLOG_TECNICO.md`: fila técnica de implementação.
-- `docs/SUPABASE_BOOTSTRAP.md`: criação do platform admin, primeiro ADM real e acessos.
-- `docs/SUPABASE_PROJECT.md`: dados não sensíveis do projeto Supabase criado.
-- `supabase/001_schema.sql`: tabelas e tipos do banco.
-- `supabase/002_rls.sql`: políticas de acesso por perfil.
+- `vercel.json`: headers e rewrites.
+- `api/create-user.js`: criacao de usuario pelo ADM.
+- `api/manage-user.js`: alteracao e exclusao/desativacao de usuario pelo ADM.
+
+## Supabase
+
+Scripts principais:
+
+- `supabase/001_schema.sql`: tipos, tabelas e indices.
+- `supabase/002_rls.sql`: politicas RLS por empresa/perfil/vinculo.
 - `supabase/003_storage.sql`: bucket de arquivos.
 - `supabase/004_seed_pilot.sql`: seed inicial.
+- `supabase/005_profiles_phone.sql`: campo de telefone em perfis.
 
-## Tabelas antigas para Google Sheets
+Regras importantes:
 
-### PROJETOS
+- ADM visualiza a empresa inteira.
+- Usuario comum ve apenas projetos em que esta vinculado.
+- Cliente ve apenas projeto vinculado ao proprio perfil.
+- Criacao/gestao de usuarios passa por API serverless com service role protegida.
 
-Campos sugeridos: `ProjetoID`, `NumeroProjeto`, `Cliente`, `Endereco`, `DataMontagem`, `Status`, `MedidorEmail`, `ProjetistaEmail`, `CompradorEmail`, `MontadorEmail`, `ArquivoFabrica`, `ArquivoObra`, `CriadoEm`, `AtualizadoEm`.
+## Guia Para Teste Com Cliente
 
-### AMBIENTES
+Antes da reuniao:
 
-Campos sugeridos: `AmbienteID`, `ProjetoID`, `NomeAmbiente`, `FotosMedicao`, `ProjetoConcluido`, `MontagemConcluida`, `NotaAssistencia`, `StatusAssistencia`.
+1. Criar o ADM real da marcenaria.
+2. Criar usuarios de cada perfil.
+3. Criar pelo menos um projeto real.
+4. Vincular cada responsavel ao projeto.
+5. Testar login de ADM, medidor, projetista, comprador, montador e cliente.
+6. Abrir pelo celular e adicionar a tela inicial.
 
-### LISTA_COMPRAS
+Durante o teste, pedir feedback sobre:
 
-Campos sugeridos: `CompraID`, `ProjetoID`, `Material`, `Quantidade`, `SolicitadoPor`, `AprovacaoADM`, `StatusCompra`, `Fatura`, `CriadoEm`.
+- Clareza do fluxo.
+- Nomes das etapas.
+- Campos obrigatorios.
+- Perfis e permissoes.
+- Rotina de medicao.
+- Rotina de compras.
+- Rotina de montagem.
+- Visao do cliente final.
+- Uso no celular em obra.
 
-### ALERTAS
+## Documentacao Complementar
 
-Campos sugeridos: `AlertaID`, `ProjetoID`, `Nivel`, `Descricao`, `CriadoPor`, `CriadoEm`, `Resolvido`.
+- `PILOTO_CLIENTE_MARCENARIA.md`: apresentacao executiva do piloto.
+- `docs/GUIA_RAPIDO_CLIENTE_PILOTO.md`: guia rapido de uso.
+- `docs/OPERACAO_PILOTO_REAL.md`: plano de operacao no cliente.
+- `docs/ROADMAP_SAAS.md`: caminho para evoluir para SaaS.
+- `docs/BACKLOG_TECNICO.md`: backlog tecnico.
+- `docs/SUPABASE_BOOTSTRAP.md`: bootstrap dos primeiros usuarios.
+- `docs/SUPABASE_PROJECT.md`: dados nao sensiveis do projeto Supabase.
 
-### USUARIOS
+## Status
 
-Campos sugeridos: `UsuarioID`, `Nome`, `Email`, `Perfil`, `Ativo`.
+Piloto real publicado e pronto para coleta de feedback com uma marcenaria.
 
-## Regras para AppSheet
-
-- Security filters por e-mail e perfil usando `USEREMAIL()`.
-- Ações de alteração de status para `Start`, `Liberar projeto`, `Aprovar compra`, `Marcar comprado`, `Entregue` e `Abrir assistência`.
-- Bots de notificação para ADM em `Start`, compra pendente, alerta crítico e assistência aberta.
-- File/Image columns com caminho de pasta calculado por projeto e ambiente.
+Proxima fase: transformar os aprendizados do piloto em funcionalidades finais de SaaS.
