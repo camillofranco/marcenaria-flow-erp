@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Marcenaria Flow ERP</title>
     <link rel="icon" href="./assets/favicon.png" type="image/png" />
-    <link rel="stylesheet" href="./styles.css?v=20260520-5" />
+    <link rel="stylesheet" href="./styles.css?v=20260520-7" />
   </head>
   <body>
     <section class="auth-gate" id="authGate">
@@ -76,6 +76,16 @@
             <span aria-hidden="true">⌁</span> Drive
           </button>
         </nav>
+
+        <div class="sidebar-actions" aria-label="Ações rápidas">
+          <button class="primary-action" id="newProjectBtn" type="button">Novo projeto</button>
+          <button class="secondary-action" id="newPersonBtn" type="button">Nova pessoa</button>
+          <button class="secondary-action" id="tourBtn" type="button">Tour guiado</button>
+          <button class="secondary-action" id="changePasswordBtn" type="button">Alterar senha</button>
+          <button class="secondary-action" id="exportDataBtn" type="button">Exportar</button>
+          <button class="secondary-action" id="importDataBtn" type="button">Importar</button>
+          <input id="importDataInput" type="file" accept="application/json" hidden />
+        </div>
       </aside>
 
       <main class="workspace">
@@ -85,18 +95,15 @@
             <h1 id="pageTitle">Painel de controle</h1>
           </div>
           <div class="topbar-actions">
+            <div class="session-badge" id="sessionBadge">
+              <span>Usuário</span>
+              <strong>Administrador</strong>
+            </div>
             <label class="search-box">
               <span aria-hidden="true">⌕</span>
               <input id="searchInput" type="search" placeholder="Buscar projeto, cliente ou endereço" />
             </label>
-            <button class="secondary-action" id="exportDataBtn" type="button">Exportar</button>
-            <button class="secondary-action" id="importDataBtn" type="button">Importar</button>
-            <button class="secondary-action" id="tourBtn" type="button">Tour</button>
-            <button class="secondary-action" id="changePasswordBtn" type="button">Alterar senha</button>
-            <button class="secondary-action" id="logoutBtn" type="button">Sair</button>
-            <button class="secondary-action" id="newPersonBtn" type="button">Nova pessoa</button>
-            <input id="importDataInput" type="file" accept="application/json" hidden />
-            <button class="primary-action" id="newProjectBtn" type="button">Novo projeto</button>
+            <button class="danger-action" id="logoutBtn" type="button">Sair</button>
           </div>
         </header>
 
@@ -208,10 +215,11 @@
 
     <dialog id="personDialog" class="modal">
       <form method="dialog" class="modal-body" id="personForm">
+        <input name="id" type="hidden" />
         <div class="modal-header">
           <div>
             <p class="eyebrow">Cadastro ADM</p>
-            <h2>Nova pessoa</h2>
+            <h2 id="personDialogTitle">Nova pessoa</h2>
           </div>
           <button class="icon-button" data-close-dialog="personDialog" aria-label="Fechar" type="button">×</button>
         </div>
@@ -272,6 +280,6 @@
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./app.js?v=20260520-5"></script>
+    <script src="./app.js?v=20260520-7"></script>
   </body>
 </html>

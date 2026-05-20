@@ -32,7 +32,8 @@ const roleProfiles = {
 };
 
 const STORAGE_KEY = "marcenaria-flow-pilot-v2";
-const TOUR_VERSION = "v2";
+const TOUR_VERSION = "v3";
+const PRODUCTION_URL = "https://marcenaria-flow-erp.vercel.app";
 const SUPABASE_URL = "https://oouxuleswyfjqfczlouh.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_BX6RrygWROrTcdmjC8oKCw_gxre0b5e";
 const supabaseClient =
@@ -45,6 +46,7 @@ const state = {
   view: "dashboard",
   statusFilter: "todos",
   selectedProjectId: "",
+  selectedPersonId: "",
   activePersonId: "",
   search: "",
   projects: [],
@@ -73,6 +75,7 @@ const dialog = document.querySelector("#projectDialog");
 const projectForm = document.querySelector("#projectForm");
 const personDialog = document.querySelector("#personDialog");
 const personForm = document.querySelector("#personForm");
+const personDialogTitle = document.querySelector("#personDialogTitle");
 const passwordDialog = document.querySelector("#passwordDialog");
 const passwordForm = document.querySelector("#passwordForm");
 const tourLayer = document.querySelector("#tourLayer");
@@ -96,6 +99,7 @@ const loginForm = document.querySelector("#loginForm");
 const forgotPasswordBtn = document.querySelector("#forgotPasswordBtn");
 const changePasswordBtn = document.querySelector("#changePasswordBtn");
 const logoutBtn = document.querySelector("#logoutBtn");
+const sessionBadge = document.querySelector("#sessionBadge");
 
 const statusLabels = {
   abertura: "Abertura",
@@ -118,32 +122,39 @@ let tourIndex = 0;
 
 const tourSteps = {
   adm: [
-    { selector: "#newProjectBtn", title: "Novo projeto", text: "Abra o card do cliente, defina responsáveis, endereço, data de montagem e ambientes.", side: "left" },
-    { selector: "#newPersonBtn", title: "Pessoas e acessos", text: "Cadastre ADM, medidor, projetista, comprador, montador e cliente. Só o ADM cria acessos.", side: "left" },
-    { selector: "[data-view='purchases']", title: "Compras", text: "Acompanhe materiais solicitados, aprove o que deve ir ao comprador e mantenha rastreabilidade.", side: "right" },
-    { selector: "[data-view='alerts']", title: "Alertas", text: "Use alertas críticos para evitar erros de obra, assistência e retrabalho.", side: "right" },
+    { selector: "#newProjectBtn", title: "Abrir projeto", text: "Crie o card do cliente com número, endereço, data de montagem, ambientes e todos os responsáveis. Esse vínculo define o que cada usuário poderá ver.", side: "right" },
+    { selector: "#newPersonBtn", title: "Gerir acessos", text: "Cadastre, altere ou desative usuários reais. O ADM controla perfis de medidor, projetista, comprador, montador, cliente e outros ADMs.", side: "right" },
+    { selector: "#roleSelect", title: "Visão por perfil", text: "No acesso real, o usuário comum fica travado no próprio perfil. O programador admin pode alternar a visão para validar a operação.", side: "right" },
+    { selector: "[data-view='purchases']", title: "Compras e aprovação", text: "Acompanhe materiais solicitados pelo projetista, aprove compras e libere apenas o que o comprador deve executar.", side: "right" },
+    { selector: "[data-view='alerts']", title: "Alertas críticos", text: "Centralize riscos de obra, assistência e pendências. Alertas vermelhos devem ser tratados antes da montagem avançar.", side: "right" },
+    { selector: "#searchInput", title: "Busca operacional", text: "Filtre rapidamente por número do projeto, cliente ou endereço, sempre respeitando a permissão do usuário logado.", side: "left" },
   ],
   medidor: [
-    { selector: "[data-view='projects']", title: "Projetos atribuídos", text: "Veja somente os projetos ligados ao seu usuário e organize a medição por ambiente.", side: "right" },
-    { selector: "#projectList", title: "Medição por ambiente", text: "Abra o projeto, confira ambientes e registre fotos técnicas no fluxo de medição.", side: "right" },
-    { selector: "#detailPanel", title: "Liberação", text: "Ao terminar, libere o projeto para desenvolvimento do projetista.", side: "left" },
+    { selector: "[data-view='projects']", title: "Projetos atribuídos", text: "O medidor enxerga apenas obras onde foi vinculado pelo ADM. Sem vínculo, a tela fica vazia.", side: "right" },
+    { selector: "#projectList", title: "Medição técnica", text: "Abra o card na obra, confira os ambientes contratados e registre a medição separada por cômodo.", side: "right" },
+    { selector: "#detailPanel", title: "Fotos e liberação", text: "Use Abrir câmera para simular fotos de medição e Liberar projeto para enviar o trabalho ao projetista.", side: "left" },
+    { selector: "[data-view='drive']", title: "Pastas automáticas", text: "As fotos ficam organizadas por cliente, projeto, etapa de medição e ambiente.", side: "right" },
   ],
   projetista: [
-    { selector: "#detailPanel", title: "Start e checklist", text: "Registre o início, marque ambientes concluídos e sinalize evolução técnica.", side: "left" },
-    { selector: "[data-view='purchases']", title: "Solicitação de compra", text: "Peça ferragens, LEDs e itens especiais para análise do ADM.", side: "right" },
-    { selector: "[data-view='drive']", title: "Arquivos técnicos", text: "Separe arquivos de fábrica e arquivos liberados para a obra.", side: "right" },
+    { selector: "[data-view='projects']", title: "Projetos liberados", text: "O projetista vê apenas projetos atribuídos a ele, já com as fotos e ambientes vindos da medição.", side: "right" },
+    { selector: "#detailPanel", title: "Start e checklist", text: "Registre o início do desenvolvimento e marque ambiente por ambiente quando o técnico estiver concluído.", side: "left" },
+    { selector: "[data-view='purchases']", title: "Pedidos especiais", text: "Solicite ferragens, LEDs e materiais fora do padrão para análise e aprovação do ADM.", side: "right" },
+    { selector: "[data-view='drive']", title: "Arquivos técnicos", text: "Separe arquivo de fábrica em Engenharia e arquivo de visualização em Obra para a equipe de montagem.", side: "right" },
   ],
   comprador: [
-    { selector: "[data-view='purchases']", title: "Compras aprovadas", text: "Controle itens aprovados pelo ADM, status de compra e entrega na fábrica.", side: "right" },
-    { selector: "#detailPanel", title: "Comprovantes", text: "Anexe faturas e mantenha o histórico do suprimento ligado ao projeto.", side: "left" },
+    { selector: "[data-view='purchases']", title: "Itens aprovados", text: "O comprador vê somente projetos vinculados ao seu usuário e com compras aprovadas pelo ADM.", side: "right" },
+    { selector: "#detailPanel", title: "Compra e entrega", text: "Atualize itens para comprado, acompanhe entrega na fábrica e mantenha comprovantes ligados ao projeto.", side: "left" },
+    { selector: "#searchInput", title: "Busca de suprimentos", text: "Localize rapidamente projetos por cliente, número ou endereço antes de cotar ou registrar uma compra.", side: "left" },
   ],
   montador: [
-    { selector: "#detailPanel", title: "Obra no celular", text: "Consulte rota, arquivos de obra, alertas críticos e checklist de montagem.", side: "left" },
-    { selector: "[data-view='alerts']", title: "Pendências", text: "Relate assistência para gerar alerta imediato ao ADM.", side: "right" },
+    { selector: "[data-view='projects']", title: "Roteiro de montagem", text: "O montador enxerga apenas obras onde foi escalado pelo ADM, com data, endereço e status.", side: "right" },
+    { selector: "#detailPanel", title: "Obra no celular", text: "Abra rota no Maps, consulte arquivos da pasta Obra, leia alertas e marque o checklist de montagem.", side: "left" },
+    { selector: "[data-view='alerts']", title: "Pendências e assistência", text: "Ao relatar pendência, o ADM recebe alerta vermelho para fabricar reposição ou tratar pós-venda.", side: "right" },
   ],
   cliente: [
-    { selector: "#projectList", title: "Acompanhamento", text: "Veja status do projeto, previsão de montagem e evolução dos ambientes.", side: "right" },
-    { selector: "[data-view='drive']", title: "Arquivos liberados", text: "O cliente acessa apenas os arquivos próprios para visualização.", side: "right" },
+    { selector: "#projectList", title: "Acompanhamento", text: "O cliente acessa apenas projetos vinculados ao e-mail dele. Sem vínculo, nenhum dado interno aparece.", side: "right" },
+    { selector: "#detailPanel", title: "Status da obra", text: "Veja etapa atual, previsão de montagem e evolução dos ambientes sem acessar compras ou alertas internos.", side: "left" },
+    { selector: "[data-view='drive']", title: "Arquivos liberados", text: "O cliente acessa somente os arquivos de visualização da pasta Obra.", side: "right" },
   ],
 };
 
@@ -169,8 +180,7 @@ function getProject(projectId) {
 
 function roleMatches(project) {
   const person = activePerson();
-  if (state.backendMode) return true;
-  if (state.role === "adm") return true;
+  if ((!state.backendMode || requireAdmin()) && state.role === "adm") return true;
   if (!person) return false;
   return {
     medidor: project.medidorId === person.id,
@@ -339,7 +349,7 @@ async function loadBackendData() {
   roleSelect.value = state.role;
 
   const [{ data: profiles, error: peopleError }, { data: projects, error: projectsError }] = await Promise.all([
-    supabaseClient.from("profiles").select("*").eq("company_id", state.companyId).order("full_name"),
+    supabaseClient.from("profiles").select("*").eq("company_id", state.companyId).eq("active", true).order("full_name"),
     supabaseClient.from("projects").select("*").order("install_date", { ascending: true }),
   ]);
   if (peopleError) throw peopleError;
@@ -373,6 +383,7 @@ function mapProfile(profile) {
     email: profile.email,
     role: profile.role,
     phone: profile.phone || "",
+    active: profile.active !== false,
   };
 }
 
@@ -506,19 +517,107 @@ async function createPersonBackend(formData) {
   await loadBackendData();
 }
 
+async function updatePersonBackend(formData) {
+  const id = String(formData.get("id") || "").trim();
+  if (!id) throw new Error("Selecione um usuário para alterar.");
+  const password = String(formData.get("password") || "").trim();
+  const response = await fetch("/api/manage-user", {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${state.session.access_token}`,
+    },
+    body: JSON.stringify({
+      id,
+      fullName: String(formData.get("name")).trim(),
+      email: String(formData.get("email")).trim(),
+      password,
+      role: formData.get("role"),
+      phone: String(formData.get("phone")).trim(),
+      companyId: state.companyId,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Não foi possível alterar o usuário.");
+  await loadBackendData();
+}
+
+async function deletePersonBackend(id) {
+  const response = await fetch("/api/manage-user", {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${state.session.access_token}`,
+    },
+    body: JSON.stringify({ id, companyId: state.companyId }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Não foi possível excluir o usuário.");
+  await loadBackendData();
+}
+
+function openPersonDialog(person = null) {
+  personForm.reset();
+  personForm.elements.id.value = person?.id || "";
+  personForm.elements.name.value = person?.name || "";
+  personForm.elements.email.value = person?.email || "";
+  personForm.elements.password.value = "";
+  personForm.elements.role.value = person?.role || "adm";
+  personForm.elements.phone.value = person?.phone || "";
+  personForm.elements.password.placeholder = person ? "Opcional: nova senha" : "Mínimo 6 caracteres";
+  personForm.elements.password.required = !person && isRealBackend();
+  personDialogTitle.textContent = person ? "Alterar pessoa" : "Nova pessoa";
+  personDialog.showModal();
+}
+
+async function deletePerson(id) {
+  const person = profileById(id);
+  if (!person) return;
+  if (state.backendMode && person.id === state.profile?.id) {
+    showToast("Não é possível excluir o próprio usuário logado.");
+    return;
+  }
+  const linked = state.projects.some((project) =>
+    [project.medidorId, project.projetistaId, project.compradorId, project.montadorId, project.clienteUserId].includes(id),
+  );
+  if (linked) {
+    showToast("Usuário vinculado a projeto. Remova o vínculo no projeto antes de excluir.");
+    return;
+  }
+  if (isRealBackend()) {
+    try {
+      await deletePersonBackend(id);
+      state.selectedPersonId = "";
+      renderPersonSelect();
+      renderPeople();
+      showToast("Usuário excluído do painel de acessos.");
+    } catch (error) {
+      showToast(friendlyError(error, "Não foi possível excluir o usuário."));
+    }
+    return;
+  }
+  state.people = state.people.filter((item) => item.id !== id);
+  state.selectedPersonId = "";
+  persistPilotData();
+  renderPersonSelect();
+  renderPeople();
+  showToast("Usuário excluído do piloto local.");
+}
+
 function renderMetrics(projects) {
-  const supportNotes = state.projects.flatMap((project) =>
+  const visibleProjects = projects || filteredProjects();
+  const supportNotes = visibleProjects.flatMap((project) =>
     project.rooms.filter((room) => room.supportNote).map((room) => ({ project, room })),
   );
-  const pendingPurchases = state.projects.flatMap((project) =>
+  const pendingPurchases = visibleProjects.flatMap((project) =>
     project.purchases.filter((item) => item.approval === "pendente"),
   );
-  const criticalAlerts = state.projects.flatMap((project) =>
+  const criticalAlerts = visibleProjects.flatMap((project) =>
     project.alerts.filter((alert) => alert.level === "critical"),
   );
 
   const items = [
-    ["Projetos visíveis", projects.length],
+    ["Projetos visíveis", visibleProjects.length],
     ["Compras para aprovar", pendingPurchases.length],
     ["Alertas críticos", criticalAlerts.length],
     ["Assistências abertas", supportNotes.length],
@@ -548,6 +647,7 @@ function renderPersonSelect() {
     userEmail.textContent = [state.profile.email, state.profile.phone].filter(Boolean).join(" · ");
     roleLabel.textContent = roleProfiles[state.role].label;
     pageTitle.textContent = roleProfiles[state.role].title;
+    renderSessionBadge();
     return;
   }
 
@@ -574,12 +674,24 @@ function renderPersonSelect() {
       : state.role === "adm"
       ? "Administrador visualiza todos os dados cadastrados neste navegador."
       : "Cadastre pessoas reais para simular permissões.";
+  renderSessionBadge();
+}
+
+function renderSessionBadge() {
+  const person = activePerson();
+  const name = state.backendMode
+    ? state.profile?.full_name || state.profile?.email || "Usuário conectado"
+    : person?.name || "Modo local";
+  const role = roleProfiles[state.role]?.label || "Perfil";
+  sessionBadge.innerHTML = `<span>${role}</span><strong>${name}</strong>`;
 }
 
 function syncAccessUI() {
   const admin = !state.backendMode || requireAdmin();
   newProjectBtn.hidden = !admin;
   newPersonBtn.hidden = !admin;
+  document.querySelector("[data-view='people']").hidden = !admin;
+  if (!admin && state.view === "people") state.view = "dashboard";
   changePasswordBtn.hidden = !isRealBackend();
 }
 
@@ -600,40 +712,50 @@ function populateProjectFormPeople() {
 
 function renderPeople() {
   renderMetrics(filteredProjects());
-  const grouped = Object.keys(roleProfiles)
-    .map((role) => {
-      const people = peopleByRole(role);
-      return `
-        <section class="detail-block">
-          <h3>${roleProfiles[role].label}</h3>
-          <div class="people-grid">
-            ${
-              people.length
-                ? people
-                    .map(
-                      (person) => `
-                        <article class="person-card">
-                          <div>
-                            <strong>${person.name}</strong>
-                            <span class="meta">${person.email || "E-mail não informado"}</span>
-                          </div>
-                          <span class="tag">${person.phone || "Sem telefone"}</span>
-                        </article>
-                      `,
-                    )
-                    .join("")
-                : `<div class="empty-state">Nenhuma pessoa cadastrada neste perfil.</div>`
-            }
-          </div>
-        </section>
-      `;
-    })
-    .join("");
-  projectList.innerHTML = grouped;
+  const visiblePeople = state.people.filter((person) => person.active !== false);
+  const selectedId = state.selectedPersonId || visiblePeople[0]?.id || "";
+  state.selectedPersonId = selectedId;
+  const selected = profileById(selectedId);
+  projectList.innerHTML = `
+    <section class="person-manager">
+      <label>
+        Usuários cadastrados
+        <select id="managedPersonSelect">
+          ${
+            visiblePeople.length
+              ? visiblePeople
+                  .map(
+                    (person) =>
+                      `<option value="${person.id}" ${person.id === selectedId ? "selected" : ""}>${person.name} · ${roleProfiles[person.role]?.label || person.role}</option>`,
+                  )
+                  .join("")
+              : `<option value="">Nenhum usuário cadastrado</option>`
+          }
+        </select>
+      </label>
+      ${
+        selected
+          ? `
+            <article class="person-card">
+              <div>
+                <strong>${selected.name}</strong>
+                <span class="meta">${selected.email || "E-mail não informado"}</span>
+                <span class="meta">${roleProfiles[selected.role]?.label || selected.role} · ${selected.phone || "Sem telefone"}</span>
+              </div>
+              <div class="action-row">
+                <button class="secondary-action" data-edit-person="${selected.id}" type="button">Alterar</button>
+                <button class="danger-action" data-delete-person="${selected.id}" type="button">Excluir</button>
+              </div>
+            </article>
+          `
+          : `<div class="empty-state">Cadastre o primeiro usuário real do piloto.</div>`
+      }
+    </section>
+  `;
   detailPanel.innerHTML = `
     <p class="eyebrow">Cadastro</p>
-    <h2>Pessoas do piloto</h2>
-    <p class="meta">Cadastre a equipe real da marcenaria e os clientes que acompanharão projetos. Depois vincule essas pessoas no Novo projeto.</p>
+    <h2>Usuários do sistema</h2>
+    <p class="meta">O ADM pode criar, alterar e excluir acessos. Cada usuário só verá projetos onde estiver vinculado como responsável ou cliente.</p>
     ${
       requireAdmin()
         ? `<div class="action-row">
@@ -642,7 +764,17 @@ function renderPeople() {
         : `<div class="empty-state">Somente administradores podem cadastrar acessos.</div>`
     }
   `;
-  detailPanel.querySelector("[data-open-person]")?.addEventListener("click", () => personDialog.showModal());
+  projectList.querySelector("#managedPersonSelect")?.addEventListener("change", (event) => {
+    state.selectedPersonId = event.target.value;
+    renderPeople();
+  });
+  projectList.querySelector("[data-edit-person]")?.addEventListener("click", (event) => {
+    openPersonDialog(profileById(event.currentTarget.dataset.editPerson));
+  });
+  projectList.querySelector("[data-delete-person]")?.addEventListener("click", (event) => {
+    deletePerson(event.currentTarget.dataset.deletePerson);
+  });
+  detailPanel.querySelector("[data-open-person]")?.addEventListener("click", () => openPersonDialog());
 }
 
 function openTour() {
@@ -654,6 +786,7 @@ function openTour() {
 function renderTour() {
   const steps = tourSteps[state.role] || tourSteps.adm;
   const step = steps[tourIndex];
+  tourLayer.classList.add("is-transitioning");
   tourRole.textContent = `Tour ${roleProfiles[state.role].label}`;
   tourTitle.textContent = step.title;
   tourText.textContent = step.text;
@@ -662,7 +795,10 @@ function renderTour() {
     .join("");
   tourPrevBtn.disabled = tourIndex === 0;
   tourNextBtn.textContent = tourIndex === steps.length - 1 ? "Concluir" : "Próximo";
-  positionTour(step);
+  window.setTimeout(() => {
+    positionTour(step);
+    window.requestAnimationFrame(() => tourLayer.classList.remove("is-transitioning"));
+  }, 110);
 }
 
 function closeTour() {
@@ -678,7 +814,8 @@ function clearTourTarget() {
 
 function positionTour(step) {
   clearTourTarget();
-  const target = document.querySelector(step.selector) || tourBtn;
+  const candidate = document.querySelector(step.selector);
+  const target = candidate && !candidate.hidden ? candidate : tourBtn;
   target.dataset.tourActive = "true";
   target.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
 
@@ -749,10 +886,12 @@ function renderProjects() {
   if (!projects.length) {
     projectList.innerHTML = `
       <div class="empty-state">
-        Nenhum projeto encontrado para este perfil. Cadastre pessoas reais e crie o primeiro projeto do piloto.
+        Nenhum projeto vinculado a este usuário no momento.
       </div>
     `;
-    detailPanel.innerHTML = `<div class="empty-state">Use Nova pessoa e Novo projeto para iniciar o piloto com dados reais.</div>`;
+    detailPanel.innerHTML = requireAdmin()
+      ? `<div class="empty-state">Use Nova pessoa e Novo projeto para iniciar o piloto com dados reais.</div>`
+      : `<div class="empty-state">Quando o ADM vincular você a um projeto, ele aparecerá aqui automaticamente.</div>`;
     return;
   }
 
@@ -1263,6 +1402,9 @@ function formatDate(value) {
 }
 
 function setView(view) {
+  if (view === "people" && state.backendMode && !requireAdmin()) {
+    view = "dashboard";
+  }
   state.view = view;
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
 
@@ -1332,7 +1474,7 @@ newPersonBtn.addEventListener("click", () => {
     showToast("Somente administradores podem cadastrar acessos.");
     return;
   }
-  personDialog.showModal();
+  openPersonDialog();
 });
 
 exportDataBtn.addEventListener("click", exportPilotData);
@@ -1394,10 +1536,15 @@ forgotPasswordBtn.addEventListener("click", async () => {
     showToast("Informe seu e-mail antes de solicitar a recuperação.");
     return;
   }
+  const redirectTo = window.location.origin === PRODUCTION_URL ? window.location.origin : PRODUCTION_URL;
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin,
+    redirectTo,
   });
-  showToast(error ? "Não foi possível enviar recuperação agora." : "Enviamos um link de recuperação para o e-mail informado.");
+  showToast(
+    error
+      ? friendlyError(error, "Não foi possível enviar recuperação agora. Use a URL publicada e confirme o e-mail no Supabase.")
+      : "Enviamos um link de recuperação para o e-mail informado.",
+  );
 });
 
 changePasswordBtn.addEventListener("click", () => {
@@ -1482,15 +1629,35 @@ personForm.addEventListener("submit", async (event) => {
   if (event.submitter?.value === "cancel") return;
   event.preventDefault();
   const formData = new FormData(personForm);
+  const editingId = String(formData.get("id") || "").trim();
   if (isRealBackend()) {
     try {
-      await createPersonBackend(formData);
+      if (editingId) {
+        await updatePersonBackend(formData);
+      } else {
+        await createPersonBackend(formData);
+      }
       personForm.reset();
       personDialog.close();
-      showToast("Acesso criado no Supabase. O usuário já pode entrar com e-mail e senha.");
+      showToast(editingId ? "Usuário alterado com sucesso." : "Acesso criado no Supabase. O usuário já pode entrar com e-mail e senha.");
     } catch (error) {
       showToast(friendlyError(error, "Não foi possível cadastrar a pessoa."));
     }
+    return;
+  }
+  if (editingId) {
+    const person = profileById(editingId);
+    if (!person) return;
+    person.name = String(formData.get("name")).trim();
+    person.email = String(formData.get("email")).trim();
+    person.role = formData.get("role");
+    person.phone = String(formData.get("phone")).trim();
+    personForm.reset();
+    personDialog.close();
+    persistPilotData();
+    renderPersonSelect();
+    renderPeople();
+    showToast("Pessoa alterada no piloto local.");
     return;
   }
   const person = {
