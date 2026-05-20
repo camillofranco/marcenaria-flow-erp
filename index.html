@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Marcenaria Flow ERP</title>
     <link rel="icon" href="./assets/favicon.png" type="image/png" />
-    <link rel="stylesheet" href="./styles.css?v=20260520-4" />
+    <link rel="stylesheet" href="./styles.css?v=20260520-5" />
   </head>
   <body>
     <section class="auth-gate" id="authGate">
@@ -26,6 +26,7 @@
           <input name="password" type="password" autocomplete="current-password" required placeholder="Senha de acesso" />
         </label>
         <button class="primary-action" type="submit">Entrar</button>
+        <button class="ghost-action" id="forgotPasswordBtn" type="button">Esqueci minha senha</button>
         <p class="meta">Acesso seguro para gestão de projetos, equipe, compras e montagem.</p>
       </form>
     </section>
@@ -91,6 +92,7 @@
             <button class="secondary-action" id="exportDataBtn" type="button">Exportar</button>
             <button class="secondary-action" id="importDataBtn" type="button">Importar</button>
             <button class="secondary-action" id="tourBtn" type="button">Tour</button>
+            <button class="secondary-action" id="changePasswordBtn" type="button">Alterar senha</button>
             <button class="secondary-action" id="logoutBtn" type="button">Sair</button>
             <button class="secondary-action" id="newPersonBtn" type="button">Nova pessoa</button>
             <input id="importDataInput" type="file" accept="application/json" hidden />
@@ -182,6 +184,28 @@
       </form>
     </dialog>
 
+    <dialog id="passwordDialog" class="modal">
+      <form method="dialog" class="modal-body" id="passwordForm">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Segurança</p>
+            <h2>Alterar senha</h2>
+          </div>
+          <button class="icon-button" data-close-dialog="passwordDialog" aria-label="Fechar" type="button">×</button>
+        </div>
+        <div class="form-grid">
+          <label class="wide">
+            Nova senha
+            <input name="newPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres" />
+          </label>
+        </div>
+        <menu class="modal-actions">
+          <button class="secondary-action" data-close-dialog="passwordDialog" type="button">Cancelar</button>
+          <button class="primary-action" value="default" type="submit">Salvar senha</button>
+        </menu>
+      </form>
+    </dialog>
+
     <dialog id="personDialog" class="modal">
       <form method="dialog" class="modal-body" id="personForm">
         <div class="modal-header">
@@ -248,6 +272,6 @@
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./app.js?v=20260520-4"></script>
+    <script src="./app.js?v=20260520-5"></script>
   </body>
 </html>

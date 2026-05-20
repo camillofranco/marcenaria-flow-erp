@@ -73,6 +73,8 @@ const dialog = document.querySelector("#projectDialog");
 const projectForm = document.querySelector("#projectForm");
 const personDialog = document.querySelector("#personDialog");
 const personForm = document.querySelector("#personForm");
+const passwordDialog = document.querySelector("#passwordDialog");
+const passwordForm = document.querySelector("#passwordForm");
 const tourLayer = document.querySelector("#tourLayer");
 const tourPopover = document.querySelector("#tourPopover");
 const tourLine = document.querySelector("#tourLine");
@@ -91,6 +93,8 @@ const importDataBtn = document.querySelector("#importDataBtn");
 const importDataInput = document.querySelector("#importDataInput");
 const authGate = document.querySelector("#authGate");
 const loginForm = document.querySelector("#loginForm");
+const forgotPasswordBtn = document.querySelector("#forgotPasswordBtn");
+const changePasswordBtn = document.querySelector("#changePasswordBtn");
 const logoutBtn = document.querySelector("#logoutBtn");
 
 const statusLabels = {
@@ -576,6 +580,7 @@ function syncAccessUI() {
   const admin = !state.backendMode || requireAdmin();
   newProjectBtn.hidden = !admin;
   newPersonBtn.hidden = !admin;
+  changePasswordBtn.hidden = !isRealBackend();
 }
 
 function fillRoleSelect(select, role, selectedId = "") {
@@ -1377,6 +1382,44 @@ loginForm.addEventListener("submit", async (event) => {
   } catch (loadError) {
     showToast(friendlyError(loadError, "Login feito, mas não foi possível carregar o perfil."));
   }
+});
+
+forgotPasswordBtn.addEventListener("click", async () => {
+  if (!supabaseClient) {
+    showToast("Não foi possível carregar a conexão segura. Recarregue a página e tente novamente.");
+    return;
+  }
+  const email = String(new FormData(loginForm).get("email") || "").trim();
+  if (!email) {
+    showToast("Informe seu e-mail antes de solicitar a recuperação.");
+    return;
+  }
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin,
+  });
+  showToast(error ? "Não foi possível enviar recuperação agora." : "Enviamos um link de recuperação para o e-mail informado.");
+});
+
+changePasswordBtn.addEventListener("click", () => {
+  passwordDialog.showModal();
+});
+
+passwordForm.addEventListener("submit", async (event) => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  const newPassword = String(new FormData(passwordForm).get("newPassword") || "").trim();
+  if (newPassword.length < 6) {
+    showToast("A nova senha deve ter pelo menos 6 caracteres.");
+    return;
+  }
+  const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+  if (error) {
+    showToast("Não foi possível alterar a senha agora.");
+    return;
+  }
+  passwordForm.reset();
+  passwordDialog.close();
+  showToast("Senha alterada com sucesso.");
 });
 
 logoutBtn.addEventListener("click", async () => {

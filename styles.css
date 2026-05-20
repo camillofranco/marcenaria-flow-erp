@@ -55,23 +55,24 @@ body {
 }
 
 .auth-card {
-  width: min(460px, 100%);
+  width: min(430px, 100%);
   display: grid;
   gap: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 8px;
   background:
-    linear-gradient(145deg, rgba(255, 253, 248, 0.82), rgba(255, 253, 248, 0.56)),
-    rgba(255, 253, 248, 0.28);
-  padding: 26px;
+    linear-gradient(145deg, rgba(255, 253, 248, 0.5), rgba(255, 253, 248, 0.24)),
+    rgba(255, 253, 248, 0.08);
+  padding: 24px;
   box-shadow: 0 34px 100px rgba(10, 13, 12, 0.42);
-  backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(132%);
 }
 
 .auth-card label {
   display: grid;
   gap: 6px;
-  color: var(--muted);
+  color: rgba(31, 37, 35, 0.82);
+  font-weight: 650;
 }
 
 .auth-card input {
@@ -79,7 +80,7 @@ body {
   min-height: 42px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.56);
   color: var(--ink);
   padding: 0 12px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
@@ -292,7 +293,8 @@ h2 {
 .primary-action,
 .secondary-action,
 .chip-button,
-.icon-button {
+.icon-button,
+.ghost-action {
   border: 1px solid transparent;
   border-radius: 8px;
   min-height: 40px;
@@ -322,9 +324,16 @@ h2 {
 
 .secondary-action:hover,
 .chip-button:hover,
-.icon-button:hover {
+.icon-button:hover,
+.ghost-action:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 24px rgba(46, 38, 26, 0.08);
+}
+
+.ghost-action {
+  background: transparent;
+  color: var(--accent-dark);
+  font-weight: 750;
 }
 
 .icon-button {
