@@ -7,6 +7,29 @@
     <link rel="stylesheet" href="./styles.css?v=20260519-2" />
   </head>
   <body>
+    <section class="auth-gate" id="authGate">
+      <form class="auth-card" id="loginForm">
+        <div class="brand auth-brand">
+          <div class="brand-mark" aria-hidden="true">MF</div>
+          <div>
+            <strong>Marcenaria Flow</strong>
+            <span>Entrar no piloto real</span>
+          </div>
+        </div>
+        <label>
+          E-mail
+          <input name="email" type="email" autocomplete="email" required placeholder="seu@email.com" />
+        </label>
+        <label>
+          Senha
+          <input name="password" type="password" autocomplete="current-password" required placeholder="Senha de acesso" />
+        </label>
+        <button class="primary-action" type="submit">Entrar</button>
+        <button class="secondary-action" id="demoModeBtn" type="button">Abrir modo demonstração local</button>
+        <p class="meta">O acesso real usa Supabase Auth. O modo demonstração guarda dados apenas neste navegador.</p>
+      </form>
+    </section>
+
     <div class="app-shell">
       <aside class="sidebar" aria-label="Navegação principal">
         <div class="brand">
@@ -68,6 +91,7 @@
             <button class="secondary-action" id="exportDataBtn" type="button">Exportar</button>
             <button class="secondary-action" id="importDataBtn" type="button">Importar</button>
             <button class="secondary-action" id="tourBtn" type="button">Tour</button>
+            <button class="secondary-action" id="logoutBtn" type="button">Sair</button>
             <button class="secondary-action" id="newPersonBtn" type="button">Nova pessoa</button>
             <input id="importDataInput" type="file" accept="application/json" hidden />
             <button class="primary-action" id="newProjectBtn" type="button">Novo projeto</button>
@@ -174,7 +198,11 @@
           </label>
           <label>
             E-mail
-            <input name="email" type="email" placeholder="email@empresa.com" />
+            <input name="email" type="email" required placeholder="email@empresa.com" />
+          </label>
+          <label>
+            Senha inicial
+            <input name="password" type="password" placeholder="Mínimo 6 caracteres" />
           </label>
           <label>
             Perfil
@@ -217,6 +245,7 @@
       </div>
     </dialog>
 
-    <script src="./app.js?v=20260519-2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./app.js?v=20260520-1"></script>
   </body>
 </html>
