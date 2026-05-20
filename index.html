@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Marcenaria Flow ERP</title>
-    <link rel="stylesheet" href="./styles.css?v=20260520-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260520-2" />
   </head>
   <body>
     <section class="auth-gate" id="authGate">
@@ -131,7 +131,7 @@
             <p class="eyebrow">Abertura ADM</p>
             <h2>Novo projeto</h2>
           </div>
-          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">×</button>
+          <button class="icon-button" data-close-dialog="projectDialog" aria-label="Fechar" type="button">×</button>
         </div>
         <div class="form-grid">
           <label>
@@ -176,7 +176,7 @@
           </label>
         </div>
         <menu class="modal-actions">
-          <button class="secondary-action" value="cancel" type="submit">Cancelar</button>
+          <button class="secondary-action" data-close-dialog="projectDialog" type="button">Cancelar</button>
           <button class="primary-action" value="default" type="submit">Criar card</button>
         </menu>
       </form>
@@ -189,7 +189,7 @@
             <p class="eyebrow">Cadastro ADM</p>
             <h2>Nova pessoa</h2>
           </div>
-          <button class="icon-button" value="cancel" aria-label="Fechar" type="submit">×</button>
+          <button class="icon-button" data-close-dialog="personDialog" aria-label="Fechar" type="button">×</button>
         </div>
         <div class="form-grid">
           <label>
@@ -221,7 +221,7 @@
           </label>
         </div>
         <menu class="modal-actions">
-          <button class="secondary-action" value="cancel" type="submit">Cancelar</button>
+          <button class="secondary-action" data-close-dialog="personDialog" type="button">Cancelar</button>
           <button class="primary-action" value="default" type="submit">Salvar pessoa</button>
         </menu>
       </form>

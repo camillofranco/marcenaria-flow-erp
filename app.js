@@ -1294,6 +1294,12 @@ tourCloseBtn.addEventListener("click", () => tourDialog.close());
 tourNextBtn.addEventListener("click", nextTourStep);
 tourPrevBtn.addEventListener("click", previousTourStep);
 
+document.querySelectorAll("[data-close-dialog]").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelector(`#${button.dataset.closeDialog}`)?.close();
+  });
+});
+
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!supabaseClient) {
