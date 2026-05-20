@@ -1,9 +1,9 @@
-const CACHE_NAME = "marcenaria-flow-shell-v20260520-8";
+const CACHE_NAME = "marcenaria-flow-shell-v20260520-9";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=20260520-8",
-  "/app.js?v=20260520-8",
+  "/styles.css?v=20260520-9",
+  "/app.js?v=20260520-9",
   "/manifest.webmanifest",
   "/assets/favicon.png",
   "/assets/flow-marcenaria-logo.png",
@@ -28,7 +28,17 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  if (request.method !== "GET" || url.pathname.startsWith("/api/")) return;
+  const isSameOrigin = url.origin === self.location.origin;
+  const isStaticAsset =
+    url.pathname === "/" ||
+    url.pathname === "/index.html" ||
+    url.pathname === "/manifest.webmanifest" ||
+    url.pathname === "/sw.js" ||
+    url.pathname.startsWith("/assets/") ||
+    url.pathname.endsWith(".css") ||
+    url.pathname.endsWith(".js");
+
+  if (request.method !== "GET" || !isSameOrigin || url.pathname.startsWith("/api/") || !isStaticAsset) return;
 
   event.respondWith(
     fetch(request)

@@ -237,6 +237,19 @@ function friendlyError(error, fallback) {
   return error?.message || fallback || "Não foi possível concluir a operação.";
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replaceAll("`", "&#96;");
+}
+
 function loadPilotData() {
   try {
     const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -643,7 +656,7 @@ function renderPersonSelect() {
     state.role = state.profile.role;
     state.activePersonId = state.profile.id;
     roleSelect.value = state.role;
-    personSelect.innerHTML = `<option value="${state.profile.id}">${state.profile.full_name || state.profile.email}</option>`;
+    personSelect.innerHTML = `<option value="${escapeAttr(state.profile.id)}">${escapeHtml(state.profile.full_name || state.profile.email)}</option>`;
     userEmail.textContent = [state.profile.email, state.profile.phone].filter(Boolean).join(" · ");
     roleLabel.textContent = roleProfiles[state.role].label;
     pageTitle.textContent = roleProfiles[state.role].title;
@@ -662,7 +675,7 @@ function renderPersonSelect() {
     state.role === "adm"
       ? `<option value="">${state.backendMode ? "Visão ADM real" : "Visão geral ADM"}</option>`
       : candidates.length
-        ? candidates.map((person) => `<option value="${person.id}">${person.name}</option>`).join("")
+        ? candidates.map((person) => `<option value="${escapeAttr(person.id)}">${escapeHtml(person.name)}</option>`).join("")
         : `<option value="">Cadastre uma pessoa ${roleProfiles[state.role].label.toLowerCase()}</option>`;
   personSelect.value = state.activePersonId;
 
@@ -683,7 +696,7 @@ function renderSessionBadge() {
     ? state.profile?.full_name || state.profile?.email || "Usuário conectado"
     : person?.name || "Modo local";
   const role = roleProfiles[state.role]?.label || "Perfil";
-  sessionBadge.innerHTML = `<span>${role}</span><strong>${name}</strong>`;
+  sessionBadge.innerHTML = `<span>${escapeHtml(role)}</span><strong>${escapeHtml(name)}</strong>`;
 }
 
 function syncAccessUI() {
@@ -699,7 +712,9 @@ function fillRoleSelect(select, role, selectedId = "") {
   const people = peopleByRole(role);
   select.innerHTML =
     `<option value="">Sem cadastro ainda</option>` +
-    people.map((person) => `<option value="${person.id}" ${person.id === selectedId ? "selected" : ""}>${person.name}</option>`).join("");
+    people
+      .map((person) => `<option value="${escapeAttr(person.id)}" ${person.id === selectedId ? "selected" : ""}>${escapeHtml(person.name)}</option>`)
+      .join("");
 }
 
 function populateProjectFormPeople() {
@@ -726,7 +741,7 @@ function renderPeople() {
               ? visiblePeople
                   .map(
                     (person) =>
-                      `<option value="${person.id}" ${person.id === selectedId ? "selected" : ""}>${person.name} · ${roleProfiles[person.role]?.label || person.role}</option>`,
+                      `<option value="${escapeAttr(person.id)}" ${person.id === selectedId ? "selected" : ""}>${escapeHtml(person.name)} · ${escapeHtml(roleProfiles[person.role]?.label || person.role)}</option>`,
                   )
                   .join("")
               : `<option value="">Nenhum usuário cadastrado</option>`
@@ -738,13 +753,13 @@ function renderPeople() {
           ? `
             <article class="person-card">
               <div>
-                <strong>${selected.name}</strong>
-                <span class="meta">${selected.email || "E-mail não informado"}</span>
-                <span class="meta">${roleProfiles[selected.role]?.label || selected.role} · ${selected.phone || "Sem telefone"}</span>
+                <strong>${escapeHtml(selected.name)}</strong>
+                <span class="meta">${escapeHtml(selected.email || "E-mail não informado")}</span>
+                <span class="meta">${escapeHtml(roleProfiles[selected.role]?.label || selected.role)} · ${escapeHtml(selected.phone || "Sem telefone")}</span>
               </div>
               <div class="action-row">
-                <button class="secondary-action" data-edit-person="${selected.id}" type="button">Alterar</button>
-                <button class="danger-action" data-delete-person="${selected.id}" type="button">Excluir</button>
+                <button class="secondary-action" data-edit-person="${escapeAttr(selected.id)}" type="button">Alterar</button>
+                <button class="danger-action" data-delete-person="${escapeAttr(selected.id)}" type="button">Excluir</button>
               </div>
             </article>
           `
@@ -898,19 +913,19 @@ function renderProjects() {
   projectList.innerHTML = projects
     .map(
       (project) => `
-      <article class="project-card ${project.id === state.selectedProjectId ? "active" : ""}" data-project-id="${project.id}">
+      <article class="project-card ${project.id === state.selectedProjectId ? "active" : ""}" data-project-id="${escapeAttr(project.id)}">
         <div>
-          <h3>${project.number} · ${project.client}</h3>
-          <p class="meta">${project.address}</p>
+          <h3>${escapeHtml(project.number)} · ${escapeHtml(project.client)}</h3>
+          <p class="meta">${escapeHtml(project.address)}</p>
           <div class="project-tags">
             <span class="tag">Montagem ${formatDate(project.installDate)}</span>
-            <span class="tag">Medidor ${personName(project.medidorId)}</span>
-            <span class="tag">Projetista ${personName(project.projetistaId)}</span>
-            <span class="tag">Montador ${personName(project.montadorId)}</span>
+            <span class="tag">Medidor ${escapeHtml(personName(project.medidorId))}</span>
+            <span class="tag">Projetista ${escapeHtml(personName(project.projetistaId))}</span>
+            <span class="tag">Montador ${escapeHtml(personName(project.montadorId))}</span>
           </div>
         </div>
         <div>
-          <span class="status-pill status-${project.status}">${statusLabels[project.status]}</span>
+          <span class="status-pill status-${escapeAttr(project.status)}">${escapeHtml(statusLabels[project.status] || project.status)}</span>
         </div>
       </article>
     `,
@@ -933,9 +948,9 @@ function renderDetail() {
 
   detailPanel.innerHTML = `
     <div>
-      <p class="eyebrow">${project.number}</p>
-      <h2>${project.client}</h2>
-      <p class="meta">${project.address}</p>
+      <p class="eyebrow">${escapeHtml(project.number)}</p>
+      <h2>${escapeHtml(project.client)}</h2>
+      <p class="meta">${escapeHtml(project.address)}</p>
       <div class="action-row">
         ${roleActionButtons(project)}
       </div>
@@ -980,11 +995,11 @@ function roleActionButtons(project) {
       <button class="secondary-action" data-action="attachInvoice" type="button">Anexar fatura</button>
     `,
     montador: `
-      <a class="primary-action link-button" href="${mapsUrl}" target="_blank" rel="noreferrer">Abrir rota</a>
+      <a class="primary-action link-button" href="${escapeAttr(mapsUrl)}" target="_blank" rel="noreferrer">Abrir rota</a>
       <button class="secondary-action" data-action="reportIssue" type="button">Relatar pendência</button>
     `,
     cliente: `
-      <span class="tag">Status: ${statusLabels[project.status] ?? project.status}</span>
+      <span class="tag">Status: ${escapeHtml(statusLabels[project.status] ?? project.status)}</span>
       <span class="tag">Montagem ${formatDate(project.installDate)}</span>
     `,
   };
@@ -1002,17 +1017,17 @@ function renderRooms(project) {
             <article class="room">
               <div class="room-header">
                 <div>
-                  <strong>${room.name}</strong>
-                  <span class="meta">${room.measurementPhotos} fotos de medição</span>
+                  <strong>${escapeHtml(room.name)}</strong>
+                  <span class="meta">${Number(room.measurementPhotos) || 0} fotos de medição</span>
                 </div>
-                <span class="tag">${drivePath(project, `Medicao / ${room.name}`)}</span>
+                <span class="tag">${escapeHtml(drivePath(project, `Medicao / ${room.name}`))}</span>
               </div>
               <div class="checks">
-                <label><input data-check="designDone" data-room="${room.name}" type="checkbox" ${room.designDone ? "checked" : ""} ${canEditRoomField("designDone") ? "" : "disabled"}> Projeto concluído</label>
-                <label><input data-check="installDone" data-room="${room.name}" type="checkbox" ${room.installDone ? "checked" : ""} ${canEditRoomField("installDone") ? "" : "disabled"}> Montagem concluída</label>
+                <label><input data-check="designDone" data-room="${escapeAttr(room.name)}" type="checkbox" ${room.designDone ? "checked" : ""} ${canEditRoomField("designDone") ? "" : "disabled"}> Projeto concluído</label>
+                <label><input data-check="installDone" data-room="${escapeAttr(room.name)}" type="checkbox" ${room.installDone ? "checked" : ""} ${canEditRoomField("installDone") ? "" : "disabled"}> Montagem concluída</label>
                 <label>
                   Nota assistência
-                  <input data-support-note data-room="${room.name}" value="${room.supportNote}" placeholder="Sem pendência" ${canEditRoomField("supportNote") ? "" : "disabled"} />
+                  <input data-support-note data-room="${escapeAttr(room.name)}" value="${escapeAttr(room.supportNote)}" placeholder="Sem pendência" ${canEditRoomField("supportNote") ? "" : "disabled"} />
                 </label>
               </div>
             </article>
@@ -1033,12 +1048,12 @@ function renderPurchases(project) {
             (item) => `
         <article class="purchase-item">
           <div>
-            <strong>${item.item}</strong>
-            <span class="meta">${item.qty} · ${personName(item.requestedById)}</span>
+            <strong>${escapeHtml(item.item)}</strong>
+            <span class="meta">${escapeHtml(item.qty)} · ${escapeHtml(personName(item.requestedById))}</span>
           </div>
           <div class="project-tags">
-            <span class="tag">${item.approval}</span>
-            <span class="tag">${item.purchaseStatus}</span>
+            <span class="tag">${escapeHtml(item.approval)}</span>
+            <span class="tag">${escapeHtml(item.purchaseStatus)}</span>
           </div>
         </article>
       `,
@@ -1060,12 +1075,12 @@ function renderAlerts(project) {
         ${project.alerts
           .map(
             (alert) => `
-            <article class="alert-item alert-${alert.level}">
+            <article class="alert-item alert-${escapeAttr(alert.level)}">
               <div>
-                <strong>${alert.title}</strong>
-                <span class="meta">Criado por ${alert.source}</span>
+                <strong>${escapeHtml(alert.title)}</strong>
+                <span class="meta">Criado por ${escapeHtml(alert.source)}</span>
               </div>
-              <span class="alert-pill ${alert.level}">${alertLabels[alert.level]}</span>
+              <span class="alert-pill ${escapeAttr(alert.level)}">${escapeHtml(alertLabels[alert.level] || alert.level)}</span>
             </article>
           `,
           )
@@ -1091,12 +1106,12 @@ function renderDrive(project) {
             ([label, key]) => `
             <article class="folder">
               <div>
-                <strong>${drivePath(project, label)}</strong>
+                <strong>${escapeHtml(drivePath(project, label))}</strong>
                 <small>${(project.files[key] || []).length} ficheiros</small>
                 <div class="file-row">
                   ${
                     (project.files[key] || []).length
-                      ? project.files[key].map((file) => `<span class="file-chip">${file}</span>`).join("")
+                      ? project.files[key].map((file) => `<span class="file-chip">${escapeHtml(file)}</span>`).join("")
                       : `<span class="file-chip">Pasta criada automaticamente</span>`
                   }
                 </div>

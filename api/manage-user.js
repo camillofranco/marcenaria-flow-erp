@@ -1,9 +1,13 @@
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const validRoles = new Set(["adm", "medidor", "projetista", "comprador", "montador", "cliente"]);
+const MAX_FIELD_LENGTH = 180;
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const headers = {
   "Content-Type": "application/json",
+  "Cache-Control": "no-store, max-age=0",
 };
 
 module.exports = async function handler(req, res) {
@@ -15,7 +19,7 @@ module.exports = async function handler(req, res) {
     return response(res, 500, { error: "Supabase function environment is not configured." });
   }
 
-  const token = req.headers.authorization?.replace("Bearer ", "");
+  const token = parseBearerToken(req.headers.authorization);
   if (!token) return response(res, 401, { error: "Missing authorization token." });
 
   let payload;
@@ -36,9 +40,20 @@ module.exports = async function handler(req, res) {
 };
 
 async function updateUser(res, requester, payload) {
-  const { id, email, fullName, role, phone, password } = payload;
+  const id = cleanText(payload.id, 80);
+  const email = normalizeEmail(payload.email);
+  const fullName = cleanText(payload.fullName);
+  const role = payload.role;
+  const phone = cleanText(payload.phone || "", 40);
+  const password = String(payload.password || "");
   if (!id || !email || !fullName || !role) {
     return response(res, 400, { error: "Missing required user fields." });
+  }
+  if (!uuidPattern.test(id)) {
+    return response(res, 400, { error: "Invalid user id." });
+  }
+  if (!emailPattern.test(email)) {
+    return response(res, 400, { error: "Invalid email." });
   }
   if (!validRoles.has(role)) {
     return response(res, 400, { error: "Invalid user role." });
@@ -66,8 +81,9 @@ async function updateUser(res, requester, payload) {
 }
 
 async function deleteUser(res, requester, payload) {
-  const { id } = payload;
+  const id = cleanText(payload.id, 80);
   if (!id) return response(res, 400, { error: "Missing user id." });
+  if (!uuidPattern.test(id)) return response(res, 400, { error: "Invalid user id." });
   if (id === requester.id) return response(res, 400, { error: "You cannot delete your own active user." });
 
   const target = await getProfileById(id);
@@ -106,12 +122,25 @@ async function getRequesterProfile(token) {
 }
 
 async function getProfileById(id) {
-  const profileResponse = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${id}&select=*`, {
+  const profileResponse = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${id}&active=eq.true&select=*`, {
     headers: serviceHeaders(),
   });
   if (!profileResponse.ok) return null;
   const [profile] = await profileResponse.json();
   return profile || null;
+}
+
+function parseBearerToken(value = "") {
+  const [scheme, token] = String(value).split(" ");
+  return scheme === "Bearer" && token ? token : "";
+}
+
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase().slice(0, MAX_FIELD_LENGTH);
+}
+
+function cleanText(value, max = MAX_FIELD_LENGTH) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, max);
 }
 
 async function updateAuthUser({ id, email, fullName, role, password, banned = false }) {

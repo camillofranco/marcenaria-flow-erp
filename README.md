@@ -121,6 +121,7 @@ O sistema usa login real via Supabase Auth e aplica permissoes por perfil.
 │   ├── BACKLOG_TECNICO.md
 │   ├── GUIA_RAPIDO_CLIENTE_PILOTO.md
 │   ├── OPERACAO_PILOTO_REAL.md
+│   ├── QA_SECURITY_AUDIT.md
 │   ├── ROADMAP_SAAS.md
 │   ├── SUPABASE_BOOTSTRAP.md
 │   └── SUPABASE_PROJECT.md
@@ -129,7 +130,8 @@ O sistema usa login real via Supabase Auth e aplica permissoes por perfil.
     ├── 002_rls.sql
     ├── 003_storage.sql
     ├── 004_seed_pilot.sql
-    └── 005_profiles_phone.sql
+    ├── 005_profiles_phone.sql
+    └── 006_security_hardening.sql
 ```
 
 ## Funcionalidades Implementadas
@@ -239,6 +241,7 @@ Scripts principais:
 - `supabase/003_storage.sql`: bucket de arquivos.
 - `supabase/004_seed_pilot.sql`: seed inicial.
 - `supabase/005_profiles_phone.sql`: campo de telefone em perfis.
+- `supabase/006_security_hardening.sql`: endurecimento de politicas para compras e arquivos.
 
 Regras importantes:
 
@@ -275,6 +278,7 @@ Durante o teste, pedir feedback sobre:
 - `PILOTO_CLIENTE_MARCENARIA.md`: apresentacao executiva do piloto.
 - `docs/GUIA_RAPIDO_CLIENTE_PILOTO.md`: guia rapido de uso.
 - `docs/OPERACAO_PILOTO_REAL.md`: plano de operacao no cliente.
+- `docs/QA_SECURITY_AUDIT.md`: auditoria QA/cyberseguranca do piloto.
 - `docs/ROADMAP_SAAS.md`: caminho para evoluir para SaaS.
 - `docs/BACKLOG_TECNICO.md`: backlog tecnico.
 - `docs/SUPABASE_BOOTSTRAP.md`: bootstrap dos primeiros usuarios.

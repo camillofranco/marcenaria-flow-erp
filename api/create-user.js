@@ -1,9 +1,12 @@
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const validRoles = new Set(["adm", "medidor", "projetista", "comprador", "montador", "cliente"]);
+const MAX_FIELD_LENGTH = 180;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const headers = {
   "Content-Type": "application/json",
+  "Cache-Control": "no-store, max-age=0",
 };
 
 module.exports = async function handler(req, res) {
@@ -15,7 +18,7 @@ module.exports = async function handler(req, res) {
     return response(res, 500, { error: "Supabase function environment is not configured." });
   }
 
-  const token = req.headers.authorization?.replace("Bearer ", "");
+  const token = parseBearerToken(req.headers.authorization);
   if (!token) return response(res, 401, { error: "Missing authorization token." });
 
   let payload;
@@ -25,9 +28,16 @@ module.exports = async function handler(req, res) {
     return response(res, 400, { error: "Invalid JSON." });
   }
 
-  const { email, password, fullName, role, phone } = payload;
+  const email = normalizeEmail(payload.email);
+  const password = String(payload.password || "");
+  const fullName = cleanText(payload.fullName);
+  const role = payload.role;
+  const phone = cleanText(payload.phone || "", 40);
   if (!email || !password || !fullName || !role) {
     return response(res, 400, { error: "Missing required user fields." });
+  }
+  if (!emailPattern.test(email)) {
+    return response(res, 400, { error: "Invalid email." });
   }
   if (!validRoles.has(role)) {
     return response(res, 400, { error: "Invalid user role." });
@@ -70,12 +80,25 @@ async function getRequesterProfile(token) {
   });
   if (!userResponse.ok) return null;
   const user = await userResponse.json();
-  const profileResponse = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=*`, {
+  const profileResponse = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&active=eq.true&select=*`, {
     headers: serviceHeaders(),
   });
   if (!profileResponse.ok) return null;
   const [profile] = await profileResponse.json();
   return profile;
+}
+
+function parseBearerToken(value = "") {
+  const [scheme, token] = String(value).split(" ");
+  return scheme === "Bearer" && token ? token : "";
+}
+
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase().slice(0, MAX_FIELD_LENGTH);
+}
+
+function cleanText(value, max = MAX_FIELD_LENGTH) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, max);
 }
 
 async function createAuthUser({ email, password, fullName, role }) {
