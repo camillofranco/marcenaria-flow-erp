@@ -42,6 +42,10 @@ body {
   padding: 18px;
 }
 
+.auth-gate[hidden] {
+  display: none;
+}
+
 .auth-gate.hidden {
   display: none;
 }
