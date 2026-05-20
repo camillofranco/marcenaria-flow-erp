@@ -18,12 +18,12 @@ Depois acesse `http://localhost:4173`.
 
 - Piloto real publicado e conectado ao Supabase.
 - Repositório publicado no GitHub.
-- Deploy público no Netlify: `https://marcenariaflow.netlify.app`.
+- Deploy público no Vercel: `https://marcenaria-flow-erp.vercel.app`.
 - Documentação de piloto criada.
 - Supabase Auth ativo para login.
 - Supabase Postgres ativo para usuários, projetos, ambientes, compras, alertas e arquivos.
 - Row Level Security configurado por empresa e perfil.
-- Netlify Function criada para que apenas ADM cadastre acessos.
+- Vercel Serverless Function criada para que apenas ADM cadastre acessos.
 - Roadmap SaaS definido.
 
 ## O que está implementado
@@ -38,7 +38,7 @@ Depois acesse `http://localhost:4173`.
 - Alertas por criticidade: crítico, atenção e informativo.
 - Cadastro real de pessoas feito pelo ADM.
 - Organização de arquivos registrada por categoria: medição, engenharia e obra.
-- Modo demonstração local disponível apenas como plano B.
+- Login profissional sem modo demonstração na tela pública.
 
 ## Próximo passo operacional
 
@@ -54,12 +54,12 @@ Para operar com o primeiro cliente real, siga:
 
 ## Arquitetura recomendada para piloto real
 
-- Frontend: webapp atual publicado no Netlify.
+- Frontend: webapp estático preparado para Vercel.
 - Banco: Supabase Postgres.
 - Login: Supabase Auth.
 - Permissões: Supabase Row Level Security.
 - Arquivos: Supabase Storage ou Google Drive integrado.
-- Deploy: Netlify.
+- Deploy: Vercel.
 
 ## Documentos principais
 

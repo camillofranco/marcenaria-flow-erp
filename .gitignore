@@ -4,3 +4,4 @@ marcenaria-flow-erp.zip
 config.js
 .netlify/
 supabase/.temp/
+.vercel

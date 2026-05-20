@@ -1,39 +1,27 @@
-# Como publicar para o cliente acessar
+# Como Publicar No Vercel
 
-Este protótipo é um webapp estático: basta hospedar os arquivos `index.html`, `styles.css` e `app.js`.
+O projeto está preparado para Vercel porque o limite do Netlify foi atingido.
 
-## Opção mais rápida: Netlify Drop
+## Configuração
 
-Site publicado para o piloto:
+1. Conecte o repositório `camillofranco/marcenaria-flow-erp` no Vercel.
+2. Framework preset: `Other`.
+3. Build command: deixe vazio.
+4. Output directory: deixe vazio ou `.`.
+5. Configure as variáveis de ambiente de produção:
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
 
-`https://marcenariaflow.netlify.app`
+## Deploy Via CLI
 
-1. Acesse `https://app.netlify.com/drop`.
-2. Arraste a pasta do projeto ou o arquivo `.zip`.
-3. O Netlify gera um link público na hora.
-4. Envie esse link para o cliente.
+```bash
+npx vercel --prod --yes
+```
 
-Observação: o app salva alterações no navegador de cada pessoa via `localStorage`. Isso é ótimo para demonstração, mas ainda não é banco de dados compartilhado.
+## O Que O Vercel Usa
 
-## Opção com controle: Vercel
+- Arquivos estáticos na raiz: `index.html`, `styles.css`, `app.js`.
+- API serverless: `api/create-user.js`.
+- Rotas e headers: `vercel.json`.
 
-1. Crie um projeto no Vercel.
-2. Envie esta pasta ou conecte um repositório GitHub.
-3. Framework: `Other`.
-4. Build command: deixe vazio.
-5. Output directory: deixe como raiz do projeto.
-
-## Opção Google/AppSheet
-
-Use este protótipo para validar telas e fluxo. Para uso real da marcenaria, o ideal é migrar a lógica para:
-
-- Google Sheets como banco.
-- Google Drive para arquivos e fotos.
-- AppSheet para login, permissões por `USEREMAIL()`, automações e notificações.
-
-## Arquivos necessários
-
-- `index.html`
-- `styles.css`
-- `app.js`
-- `README.md` opcional
+Depois de publicar, atualize qualquer documentação operacional com a nova URL final do Vercel.

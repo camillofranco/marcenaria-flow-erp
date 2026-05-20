@@ -55,7 +55,7 @@ O piloto publicado agora usa:
 - Supabase Auth para login.
 - Supabase Row Level Security para separar perfis e empresa.
 - Supabase Storage preparado para arquivos e fotos.
-- Netlify para publicação do frontend e função segura de criação de usuários.
+- Vercel para publicação do frontend e função segura de criação de usuários.
 
 Alternativa temporária:
 
@@ -78,23 +78,27 @@ Para piloto real com múltiplos usuários, não operar apenas em `localStorage`.
 4. Primeiro ADM real deve ser criado pelo app em `Nova pessoa`.
 5. A partir dele, o próprio cliente cadastra equipe e clientes.
 
-## Configuração Netlify
+## Configuração Vercel
 
 1. Repositório conectado: `camillofranco/marcenaria-flow-erp`.
 2. Build command: vazio.
 3. Publish directory: `.`.
-4. Site publicado: `https://marcenariaflow.netlify.app`.
-5. Variáveis de produção configuradas para a função `create-user`.
+4. Framework: `Other`.
+5. Site publicado: `https://marcenaria-flow-erp.vercel.app`.
+6. Variáveis de produção obrigatórias:
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+7. A função segura fica em `/api/create-user`.
 
-O app publicado já usa Supabase para login, cadastro de pessoas e dados operacionais. O modo demonstração local continua disponível apenas para apresentação sem dados reais.
+O app publicado já usa Supabase para login, cadastro de pessoas e dados operacionais. A tela pública não exibe modo demonstração.
 
 ## Segurança Pós-Implantação
 
 Depois de validar o acesso publicado:
 
 - Revogar o Supabase access token usado na implantação.
-- Rotacionar a chave `service_role` e atualizar a variável `SUPABASE_SERVICE_ROLE_KEY` no Netlify.
-- Rotacionar ou revogar o token pessoal do Netlify usado na implantação.
+- Rotacionar a chave `service_role` e atualizar a variável `SUPABASE_SERVICE_ROLE_KEY` no Vercel.
+- Revogar tokens pessoais antigos de implantação.
 - Alterar a senha do usuário técnico/ADM.
 - Criar o ADM real do cliente e operar o dia a dia por esse acesso.
 

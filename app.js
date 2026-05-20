@@ -482,7 +482,7 @@ async function createPersonBackend(formData) {
     throw new Error("Informe uma senha inicial com pelo menos 6 caracteres.");
   }
 
-  const response = await fetch("/.netlify/functions/create-user", {
+  const response = await fetch("/api/create-user", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
