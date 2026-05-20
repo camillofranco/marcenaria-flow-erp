@@ -4,16 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Marcenaria Flow ERP</title>
-    <link rel="stylesheet" href="./styles.css?v=20260520-2" />
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css?v=20260520-3" />
   </head>
   <body>
     <section class="auth-gate" id="authGate">
       <form class="auth-card" id="loginForm">
         <div class="brand auth-brand">
-          <div class="brand-mark" aria-hidden="true">MF</div>
+          <img class="brand-logo auth-logo" src="./assets/flow-marcenaria-logo.svg" alt="Flow Marcenaria" />
           <div>
-            <strong>Marcenaria Flow</strong>
-            <span>Entrar no piloto real</span>
+            <strong>Flow Marcenaria</strong>
+            <span>ERP operacional</span>
           </div>
         </div>
         <label>
@@ -25,17 +26,16 @@
           <input name="password" type="password" autocomplete="current-password" required placeholder="Senha de acesso" />
         </label>
         <button class="primary-action" type="submit">Entrar</button>
-        <button class="secondary-action" id="demoModeBtn" type="button">Abrir modo demonstração local</button>
-        <p class="meta">O acesso real usa Supabase Auth. O modo demonstração guarda dados apenas neste navegador.</p>
+        <p class="meta">Acesso seguro para gestão de projetos, equipe, compras e montagem.</p>
       </form>
     </section>
 
     <div class="app-shell">
       <aside class="sidebar" aria-label="Navegação principal">
         <div class="brand">
-          <div class="brand-mark" aria-hidden="true">MF</div>
+          <img class="brand-logo" src="./assets/flow-marcenaria-logo.svg" alt="Flow Marcenaria" />
           <div>
-            <strong>Marcenaria Flow</strong>
+            <strong>Flow Marcenaria</strong>
             <span>ERP operacional</span>
           </div>
         </div>
@@ -227,9 +227,11 @@
       </form>
     </dialog>
 
-    <dialog id="tourDialog" class="modal tour-modal">
-      <div class="modal-body">
-        <div class="modal-header">
+    <section class="tour-layer" id="tourLayer" hidden>
+      <div class="tour-backdrop"></div>
+      <div class="tour-line" id="tourLine"></div>
+      <article class="tour-popover" id="tourPopover">
+        <div class="tour-popover-header">
           <div>
             <p class="eyebrow" id="tourRole">Tour</p>
             <h2 id="tourTitle">Bem-vindo</h2>
@@ -238,14 +240,14 @@
         </div>
         <p id="tourText"></p>
         <div class="tour-progress" id="tourProgress"></div>
-        <menu class="modal-actions">
+        <menu class="tour-actions">
           <button class="secondary-action" id="tourPrevBtn" type="button">Voltar</button>
           <button class="primary-action" id="tourNextBtn" type="button">Próximo</button>
         </menu>
-      </div>
-    </dialog>
+      </article>
+    </section>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./app.js?v=20260520-1"></script>
+    <script src="./app.js?v=20260520-3"></script>
   </body>
 </html>

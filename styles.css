@@ -14,6 +14,7 @@
   --yellow: #d8ad24;
   --green: #2f855a;
   --shadow: 0 20px 55px rgba(46, 38, 26, 0.12);
+  --glass: rgba(255, 253, 248, 0.72);
 }
 
 * {
@@ -39,7 +40,8 @@ body {
   display: grid;
   place-items: center;
   background:
-    linear-gradient(90deg, rgba(12, 18, 16, 0.72), rgba(12, 18, 16, 0.34) 48%, rgba(12, 18, 16, 0.08)),
+    radial-gradient(circle at 50% 42%, rgba(255, 253, 248, 0.1), rgba(8, 12, 11, 0.16) 38%, rgba(8, 12, 11, 0.48)),
+    linear-gradient(90deg, rgba(12, 18, 16, 0.52), rgba(12, 18, 16, 0.2) 50%, rgba(12, 18, 16, 0.05)),
     url("./assets/login-background.jpg") center / cover no-repeat;
   padding: 18px;
 }
@@ -53,15 +55,17 @@ body {
 }
 
 .auth-card {
-  width: min(430px, 100%);
+  width: min(460px, 100%);
   display: grid;
-  gap: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.26);
+  gap: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
   border-radius: 8px;
-  background: rgba(255, 253, 248, 0.94);
-  padding: 22px;
-  box-shadow: 0 28px 80px rgba(10, 13, 12, 0.38);
-  backdrop-filter: blur(12px);
+  background:
+    linear-gradient(145deg, rgba(255, 253, 248, 0.82), rgba(255, 253, 248, 0.56)),
+    rgba(255, 253, 248, 0.28);
+  padding: 26px;
+  box-shadow: 0 34px 100px rgba(10, 13, 12, 0.42);
+  backdrop-filter: blur(20px) saturate(140%);
 }
 
 .auth-card label {
@@ -75,13 +79,20 @@ body {
   min-height: 42px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.78);
   color: var(--ink);
   padding: 0 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
 }
 
 .auth-brand {
   margin-bottom: 8px;
+}
+
+.auth-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
 }
 
 button,
@@ -103,7 +114,9 @@ button {
 
 .sidebar {
   border-right: 1px solid var(--line);
-  background: #fcfaf5;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(248, 244, 236, 0.92)),
+    #fcfaf5;
   padding: 24px 18px;
   display: flex;
   flex-direction: column;
@@ -116,16 +129,12 @@ button {
   align-items: center;
 }
 
-.brand-mark {
+.brand-logo {
   width: 44px;
   height: 44px;
-  display: grid;
-  place-items: center;
-  background: var(--ink);
-  color: #fff;
   border-radius: 8px;
-  font-weight: 800;
-  letter-spacing: 0;
+  object-fit: cover;
+  box-shadow: 0 10px 24px rgba(31, 37, 35, 0.18);
 }
 
 .brand strong,
@@ -147,8 +156,9 @@ button {
 .role-switcher {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel);
+  background: rgba(255, 253, 248, 0.76);
   padding: 14px;
+  box-shadow: 0 12px 28px rgba(46, 38, 26, 0.08);
 }
 
 .role-switcher label {
@@ -196,17 +206,22 @@ button {
   gap: 10px;
   padding: 0 12px;
   text-align: left;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
 }
 
 .nav-item:hover,
 .nav-item.active {
   color: var(--ink);
-  background: #ece6da;
+  background: linear-gradient(90deg, rgba(31, 111, 99, 0.12), #ece6da);
+  transform: translateX(2px);
 }
 
 .workspace {
   padding: 28px;
   min-width: 0;
+  background:
+    radial-gradient(circle at 88% 5%, rgba(31, 111, 99, 0.1), transparent 28%),
+    radial-gradient(circle at 12% 92%, rgba(189, 122, 25, 0.08), transparent 32%);
 }
 
 .topbar {
@@ -258,9 +273,10 @@ h2 {
   align-items: center;
   gap: 8px;
   border: 1px solid var(--line);
-  background: var(--panel-strong);
+  background: rgba(255, 255, 255, 0.82);
   border-radius: 8px;
   padding: 0 12px;
+  box-shadow: 0 10px 24px rgba(46, 38, 26, 0.06);
 }
 
 .search-box input {
@@ -281,24 +297,34 @@ h2 {
   border-radius: 8px;
   min-height: 40px;
   padding: 0 10px;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 
 .primary-action {
-  background: var(--accent);
+  background: linear-gradient(180deg, #2b8a7b, var(--accent));
   color: #fff;
   font-weight: 750;
+  box-shadow: 0 12px 24px rgba(31, 111, 99, 0.2);
 }
 
 .primary-action:hover {
   background: var(--accent-dark);
+  transform: translateY(-1px);
 }
 
 .secondary-action,
 .chip-button,
 .icon-button {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.78);
   border-color: var(--line);
   color: var(--ink);
+}
+
+.secondary-action:hover,
+.chip-button:hover,
+.icon-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(46, 38, 26, 0.08);
 }
 
 .icon-button {
@@ -336,6 +362,7 @@ h2 {
 
 .metric-card {
   padding: 16px;
+  box-shadow: 0 14px 32px rgba(46, 38, 26, 0.07);
 }
 
 .metric-card span {
@@ -347,6 +374,7 @@ h2 {
   display: block;
   font-size: 2rem;
   margin-top: 6px;
+  color: var(--accent-dark);
 }
 
 .content-grid {
@@ -360,6 +388,7 @@ h2 {
 .detail-panel {
   padding: 18px;
   box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
 }
 
 .section-heading {
@@ -401,13 +430,15 @@ h2 {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
-  transition: transform 0.18s ease, border-color 0.18s ease;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 253, 248, 0.9));
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .project-card:hover,
 .project-card.active {
   transform: translateY(-1px);
   border-color: rgba(31, 111, 99, 0.5);
+  box-shadow: 0 16px 36px rgba(46, 38, 26, 0.08);
 }
 
 .project-card h3 {
@@ -487,8 +518,9 @@ h2 {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: linear-gradient(180deg, #fff, #fffdf8);
   padding: 12px;
+  box-shadow: 0 10px 26px rgba(46, 38, 26, 0.05);
 }
 
 .room-header,
@@ -561,11 +593,12 @@ h2 {
 .person-card {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: linear-gradient(180deg, #fff, #fffdf8);
   padding: 14px;
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  box-shadow: 0 12px 30px rgba(46, 38, 26, 0.06);
 }
 
 .person-card strong,
@@ -640,8 +673,72 @@ h2 {
   margin: 0;
 }
 
-.tour-modal {
-  width: min(620px, calc(100vw - 28px));
+.tour-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 18;
+  pointer-events: none;
+}
+
+.tour-layer[hidden] {
+  display: none;
+}
+
+.tour-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(31, 37, 35, 0.1);
+}
+
+.tour-popover {
+  position: fixed;
+  z-index: 20;
+  width: min(360px, calc(100vw - 28px));
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255, 253, 248, 0.94), rgba(255, 253, 248, 0.82)),
+    var(--panel);
+  box-shadow: 0 24px 80px rgba(31, 37, 35, 0.24);
+  padding: 16px;
+  pointer-events: auto;
+}
+
+.tour-popover-header,
+.tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tour-line {
+  position: fixed;
+  z-index: 19;
+  height: 2px;
+  width: 80px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, rgba(31, 111, 99, 0.08), var(--accent));
+  pointer-events: none;
+}
+
+.tour-line::after {
+  content: "";
+  position: absolute;
+  right: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+[data-tour-active="true"] {
+  position: relative;
+  z-index: 21;
+  outline: 2px solid rgba(31, 111, 99, 0.54);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 8px rgba(31, 111, 99, 0.12);
 }
 
 .tour-progress {

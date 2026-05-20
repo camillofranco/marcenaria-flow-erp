@@ -32,6 +32,7 @@ const roleProfiles = {
 };
 
 const STORAGE_KEY = "marcenaria-flow-pilot-v2";
+const TOUR_VERSION = "v2";
 const SUPABASE_URL = "https://oouxuleswyfjqfczlouh.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_BX6RrygWROrTcdmjC8oKCw_gxre0b5e";
 const supabaseClient =
@@ -72,7 +73,9 @@ const dialog = document.querySelector("#projectDialog");
 const projectForm = document.querySelector("#projectForm");
 const personDialog = document.querySelector("#personDialog");
 const personForm = document.querySelector("#personForm");
-const tourDialog = document.querySelector("#tourDialog");
+const tourLayer = document.querySelector("#tourLayer");
+const tourPopover = document.querySelector("#tourPopover");
+const tourLine = document.querySelector("#tourLine");
 const tourRole = document.querySelector("#tourRole");
 const tourTitle = document.querySelector("#tourTitle");
 const tourText = document.querySelector("#tourText");
@@ -88,7 +91,6 @@ const importDataBtn = document.querySelector("#importDataBtn");
 const importDataInput = document.querySelector("#importDataInput");
 const authGate = document.querySelector("#authGate");
 const loginForm = document.querySelector("#loginForm");
-const demoModeBtn = document.querySelector("#demoModeBtn");
 const logoutBtn = document.querySelector("#logoutBtn");
 
 const statusLabels = {
@@ -112,32 +114,32 @@ let tourIndex = 0;
 
 const tourSteps = {
   adm: [
-    ["Visão geral", "Aqui o ADM acompanha todos os projetos, responsáveis, compras pendentes, alertas e assistências abertas."],
-    ["Pessoas reais", "Comece cadastrando medidor, projetista, comprador, montador e clientes em Nova pessoa."],
-    ["Abertura do projeto", "Depois clique em Novo projeto para informar cliente, endereço, data, responsáveis e ambientes."],
-    ["Piloto seguro", "Durante esta fase os dados ficam no navegador. Use Exportar ao fim do dia para gerar backup."],
+    { selector: "#newProjectBtn", title: "Novo projeto", text: "Abra o card do cliente, defina responsáveis, endereço, data de montagem e ambientes.", side: "left" },
+    { selector: "#newPersonBtn", title: "Pessoas e acessos", text: "Cadastre ADM, medidor, projetista, comprador, montador e cliente. Só o ADM cria acessos.", side: "left" },
+    { selector: "[data-view='purchases']", title: "Compras", text: "Acompanhe materiais solicitados, aprove o que deve ir ao comprador e mantenha rastreabilidade.", side: "right" },
+    { selector: "[data-view='alerts']", title: "Alertas", text: "Use alertas críticos para evitar erros de obra, assistência e retrabalho.", side: "right" },
   ],
   medidor: [
-    ["Projetos atribuídos", "O medidor visualiza os projetos vinculados à pessoa selecionada neste perfil."],
-    ["Medição por ambiente", "Entre no projeto, confira os ambientes e use Abrir câmera para simular fotos por ambiente."],
-    ["Liberação", "Ao finalizar, use Liberar projeto para mover o fluxo ao projetista."],
+    { selector: "[data-view='projects']", title: "Projetos atribuídos", text: "Veja somente os projetos ligados ao seu usuário e organize a medição por ambiente.", side: "right" },
+    { selector: "#projectList", title: "Medição por ambiente", text: "Abra o projeto, confira ambientes e registre fotos técnicas no fluxo de medição.", side: "right" },
+    { selector: "#detailPanel", title: "Liberação", text: "Ao terminar, libere o projeto para desenvolvimento do projetista.", side: "left" },
   ],
   projetista: [
-    ["Start do projeto", "Use Start para registrar o início do desenvolvimento e sinalizar ao ADM."],
-    ["Checklist técnico", "Marque os ambientes concluídos e registre solicitações de compra quando houver materiais especiais."],
-    ["Arquivos", "Use Anexar ficheiros para simular envio de arquivo de fábrica e arquivo de obra."],
+    { selector: "#detailPanel", title: "Start e checklist", text: "Registre o início, marque ambientes concluídos e sinalize evolução técnica.", side: "left" },
+    { selector: "[data-view='purchases']", title: "Solicitação de compra", text: "Peça ferragens, LEDs e itens especiais para análise do ADM.", side: "right" },
+    { selector: "[data-view='drive']", title: "Arquivos técnicos", text: "Separe arquivos de fábrica e arquivos liberados para a obra.", side: "right" },
   ],
   comprador: [
-    ["Compras aprovadas", "O comprador acompanha itens aprovados pelo ADM e atualiza o andamento da compra."],
-    ["Comprovantes", "Use Anexar fatura para simular registro de nota fiscal ou comprovante."],
+    { selector: "[data-view='purchases']", title: "Compras aprovadas", text: "Controle itens aprovados pelo ADM, status de compra e entrega na fábrica.", side: "right" },
+    { selector: "#detailPanel", title: "Comprovantes", text: "Anexe faturas e mantenha o histórico do suprimento ligado ao projeto.", side: "left" },
   ],
   montador: [
-    ["Obra no celular", "O montador consulta rota, arquivos da obra, alertas críticos e checklist por ambiente."],
-    ["Pendências", "Ao relatar pendência, o sistema cria alerta vermelho para o ADM tratar assistência ou reposição."],
+    { selector: "#detailPanel", title: "Obra no celular", text: "Consulte rota, arquivos de obra, alertas críticos e checklist de montagem.", side: "left" },
+    { selector: "[data-view='alerts']", title: "Pendências", text: "Relate assistência para gerar alerta imediato ao ADM.", side: "right" },
   ],
   cliente: [
-    ["Acompanhamento", "O cliente acompanha status, previsão de montagem, ambientes e arquivos liberados para visualização."],
-    ["Transparência", "Este perfil não mostra compras internas nem arquivos de engenharia; mostra somente o que interessa ao cliente."],
+    { selector: "#projectList", title: "Acompanhamento", text: "Veja status do projeto, previsão de montagem e evolução dos ambientes.", side: "right" },
+    { selector: "[data-view='drive']", title: "Arquivos liberados", text: "O cliente acessa apenas os arquivos próprios para visualização.", side: "right" },
   ],
 };
 
@@ -640,28 +642,75 @@ function renderPeople() {
 
 function openTour() {
   tourIndex = 0;
+  tourLayer.hidden = false;
   renderTour();
-  tourDialog.showModal();
 }
 
 function renderTour() {
   const steps = tourSteps[state.role] || tourSteps.adm;
-  const [title, text] = steps[tourIndex];
+  const step = steps[tourIndex];
   tourRole.textContent = `Tour ${roleProfiles[state.role].label}`;
-  tourTitle.textContent = title;
-  tourText.textContent = text;
+  tourTitle.textContent = step.title;
+  tourText.textContent = step.text;
   tourProgress.innerHTML = steps
     .map((_, index) => `<span class="tour-dot ${index === tourIndex ? "active" : ""}"></span>`)
     .join("");
   tourPrevBtn.disabled = tourIndex === 0;
   tourNextBtn.textContent = tourIndex === steps.length - 1 ? "Concluir" : "Próximo";
+  positionTour(step);
+}
+
+function closeTour() {
+  clearTourTarget();
+  tourLayer.hidden = true;
+}
+
+function clearTourTarget() {
+  document.querySelectorAll("[data-tour-active]").forEach((element) => {
+    element.removeAttribute("data-tour-active");
+  });
+}
+
+function positionTour(step) {
+  clearTourTarget();
+  const target = document.querySelector(step.selector) || tourBtn;
+  target.dataset.tourActive = "true";
+  target.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+
+  window.setTimeout(() => {
+    const margin = 18;
+    const rect = target.getBoundingClientRect();
+    const popRect = tourPopover.getBoundingClientRect();
+    const targetX = rect.left + rect.width / 2;
+    const targetY = rect.top + rect.height / 2;
+    let left = step.side === "right" ? rect.right + margin : rect.left - popRect.width - margin;
+    let top = rect.top + rect.height / 2 - popRect.height / 2;
+
+    left = Math.max(14, Math.min(left, window.innerWidth - popRect.width - 14));
+    top = Math.max(14, Math.min(top, window.innerHeight - popRect.height - 14));
+
+    tourPopover.style.left = `${left}px`;
+    tourPopover.style.top = `${top}px`;
+
+    const popX = left + (targetX < left ? 0 : popRect.width);
+    const popY = top + popRect.height / 2;
+    const deltaX = popX - targetX;
+    const deltaY = popY - targetY;
+    const length = Math.hypot(deltaX, deltaY);
+    const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+
+    tourLine.style.left = `${targetX}px`;
+    tourLine.style.top = `${targetY}px`;
+    tourLine.style.width = `${length}px`;
+    tourLine.style.transform = `rotate(${angle}deg)`;
+  }, 260);
 }
 
 function nextTourStep() {
   const steps = tourSteps[state.role] || tourSteps.adm;
   if (tourIndex === steps.length - 1) {
-    localStorage.setItem(`marcenaria-flow-tour-${state.role}`, "done");
-    tourDialog.close();
+    localStorage.setItem(tourKey(), "done");
+    closeTour();
     return;
   }
   tourIndex += 1;
@@ -675,9 +724,13 @@ function previousTourStep() {
 }
 
 function maybeOpenFirstAccessTour() {
-  if (!localStorage.getItem(`marcenaria-flow-tour-${state.role}`)) {
-    window.setTimeout(openTour, 450);
+  if (!localStorage.getItem(tourKey())) {
+    window.setTimeout(openTour, 650);
   }
+}
+
+function tourKey() {
+  return `marcenaria-flow-tour-${TOUR_VERSION}-${state.role}`;
 }
 
 function renderProjects() {
@@ -1290,9 +1343,12 @@ importDataInput.addEventListener("change", () => {
 });
 
 tourBtn.addEventListener("click", openTour);
-tourCloseBtn.addEventListener("click", () => tourDialog.close());
+tourCloseBtn.addEventListener("click", closeTour);
 tourNextBtn.addEventListener("click", nextTourStep);
 tourPrevBtn.addEventListener("click", previousTourStep);
+window.addEventListener("resize", () => {
+  if (!tourLayer.hidden) renderTour();
+});
 
 document.querySelectorAll("[data-close-dialog]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -1303,7 +1359,7 @@ document.querySelectorAll("[data-close-dialog]").forEach((button) => {
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!supabaseClient) {
-    showToast("Supabase não carregou. Use o modo demonstração local.");
+    showToast("Não foi possível carregar a conexão segura. Recarregue a página e tente novamente.");
     return;
   }
   const formData = new FormData(loginForm);
@@ -1321,19 +1377,6 @@ loginForm.addEventListener("submit", async (event) => {
   } catch (loadError) {
     showToast(friendlyError(loadError, "Login feito, mas não foi possível carregar o perfil."));
   }
-});
-
-demoModeBtn.addEventListener("click", () => {
-  state.backendMode = false;
-  state.session = null;
-  state.profile = null;
-  showAuthGate(false);
-  exportDataBtn.hidden = false;
-  importDataBtn.hidden = false;
-  renderPersonSelect();
-  renderProjects();
-  maybeOpenFirstAccessTour();
-  showToast("Modo demonstração local aberto.");
 });
 
 logoutBtn.addEventListener("click", async () => {
