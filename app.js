@@ -207,6 +207,16 @@ function requireAdmin() {
   return state.profile?.platform_admin || state.profile?.role === "adm";
 }
 
+function canEditRoomField(field) {
+  if (!state.backendMode && state.role === "adm") return true;
+  if (requireAdmin()) return true;
+  return {
+    designDone: state.role === "projetista",
+    installDone: state.role === "montador",
+    supportNote: state.role === "montador",
+  }[field];
+}
+
 function friendlyError(error, fallback) {
   return error?.message || fallback || "Não foi possível concluir a operação.";
 }
@@ -617,11 +627,15 @@ function renderPeople() {
     <p class="eyebrow">Cadastro</p>
     <h2>Pessoas do piloto</h2>
     <p class="meta">Cadastre a equipe real da marcenaria e os clientes que acompanharão projetos. Depois vincule essas pessoas no Novo projeto.</p>
-    <div class="action-row">
-      <button class="primary-action" data-open-person type="button">Nova pessoa</button>
-    </div>
+    ${
+      requireAdmin()
+        ? `<div class="action-row">
+            <button class="primary-action" data-open-person type="button">Nova pessoa</button>
+          </div>`
+        : `<div class="empty-state">Somente administradores podem cadastrar acessos.</div>`
+    }
   `;
-  detailPanel.querySelector("[data-open-person]").addEventListener("click", () => personDialog.showModal());
+  detailPanel.querySelector("[data-open-person]")?.addEventListener("click", () => personDialog.showModal());
 }
 
 function openTour() {
@@ -731,7 +745,7 @@ function renderDetail() {
     </div>
     ${renderRooms(project)}
     ${state.role === "cliente" ? "" : renderPurchases(project)}
-    ${renderAlerts(project)}
+    ${state.role === "cliente" ? "" : renderAlerts(project)}
     ${renderDrive(project)}
   `;
 
@@ -797,11 +811,11 @@ function renderRooms(project) {
                 <span class="tag">${drivePath(project, `Medicao / ${room.name}`)}</span>
               </div>
               <div class="checks">
-                <label><input data-check="designDone" data-room="${room.name}" type="checkbox" ${room.designDone ? "checked" : ""}> Projeto concluído</label>
-                <label><input data-check="installDone" data-room="${room.name}" type="checkbox" ${room.installDone ? "checked" : ""}> Montagem concluída</label>
+                <label><input data-check="designDone" data-room="${room.name}" type="checkbox" ${room.designDone ? "checked" : ""} ${canEditRoomField("designDone") ? "" : "disabled"}> Projeto concluído</label>
+                <label><input data-check="installDone" data-room="${room.name}" type="checkbox" ${room.installDone ? "checked" : ""} ${canEditRoomField("installDone") ? "" : "disabled"}> Montagem concluída</label>
                 <label>
                   Nota assistência
-                  <input data-support-note data-room="${room.name}" value="${room.supportNote}" placeholder="Sem pendência" />
+                  <input data-support-note data-room="${room.name}" value="${room.supportNote}" placeholder="Sem pendência" ${canEditRoomField("supportNote") ? "" : "disabled"} />
                 </label>
               </div>
             </article>

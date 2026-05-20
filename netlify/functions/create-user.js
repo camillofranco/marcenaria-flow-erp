@@ -1,5 +1,6 @@
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const validRoles = new Set(["adm", "medidor", "projetista", "comprador", "montador", "cliente"]);
 
 const headers = {
   "Content-Type": "application/json",
@@ -27,6 +28,12 @@ exports.handler = async (event) => {
   const { email, password, fullName, role, phone } = payload;
   if (!email || !password || !fullName || !role) {
     return response(400, { error: "Missing required user fields." });
+  }
+  if (!validRoles.has(role)) {
+    return response(400, { error: "Invalid user role." });
+  }
+  if (String(password).length < 6) {
+    return response(400, { error: "Password must have at least 6 characters." });
   }
 
   const requester = await getRequesterProfile(token);
@@ -83,7 +90,7 @@ async function createAuthUser({ email, password, fullName, role }) {
     }),
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.message || "Could not create auth user.");
+  if (!response.ok) throw new Error(formatSupabaseAuthError(data));
   return data;
 }
 
@@ -108,6 +115,20 @@ async function createProfile({ id, companyId, fullName, email, role, phone, plat
   const data = await response.json();
   if (!response.ok) throw new Error(data.message || "Could not create profile.");
   return data[0];
+}
+
+function formatSupabaseAuthError(data) {
+  const message = data.message || data.error_description || data.error || "";
+  if (/already|registered|exists|duplicate/i.test(message)) {
+    return "Este e-mail já possui acesso cadastrado.";
+  }
+  if (/password/i.test(message)) {
+    return "A senha inicial não atende aos requisitos mínimos.";
+  }
+  if (/email/i.test(message)) {
+    return "Informe um e-mail válido para criar o acesso.";
+  }
+  return message || "Não foi possível criar o acesso no Supabase Auth.";
 }
 
 function serviceHeaders() {
