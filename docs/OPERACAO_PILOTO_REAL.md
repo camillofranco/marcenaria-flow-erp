@@ -49,12 +49,13 @@ Usar o arquivo `data/projetos_piloto_template.csv` como base de coleta.
 
 ## Infraestrutura Do Piloto
 
-Para sair do MVP local, a recomendação é:
+O piloto publicado agora usa:
 
-- Supabase para banco de dados.
+- Supabase Postgres para banco de dados.
 - Supabase Auth para login.
-- Supabase Storage para arquivos e fotos.
-- Netlify para publicação do frontend.
+- Supabase Row Level Security para separar perfis e empresa.
+- Supabase Storage preparado para arquivos e fotos.
+- Netlify para publicação do frontend e função segura de criação de usuários.
 
 Alternativa temporária:
 
@@ -66,28 +67,36 @@ Para piloto real com múltiplos usuários, não operar apenas em `localStorage`.
 
 ## Configuração Supabase
 
-1. Criar um projeto no Supabase.
-2. Abrir o SQL Editor.
-3. Rodar os arquivos nesta ordem:
+1. Projeto Supabase criado.
+2. Scripts aplicados nesta ordem:
    - `supabase/001_schema.sql`
    - `supabase/002_rls.sql`
    - `supabase/003_storage.sql`
    - `supabase/004_seed_pilot.sql`
-4. Criar usuários em Authentication.
-5. Copiar os UUIDs dos usuários.
-6. Inserir os perfis reais na tabela `profiles`.
-7. Criar os projetos reais na tabela `projects`.
-8. Criar os ambientes na tabela `rooms`.
+   - `supabase/005_profiles_phone.sql`
+3. Usuário técnico/ADM criado.
+4. Primeiro ADM real deve ser criado pelo app em `Nova pessoa`.
+5. A partir dele, o próprio cliente cadastra equipe e clientes.
 
 ## Configuração Netlify
 
-1. Conectar o repositório `camillofranco/marcenaria-flow-erp`.
+1. Repositório conectado: `camillofranco/marcenaria-flow-erp`.
 2. Build command: vazio.
 3. Publish directory: `.`.
-4. Criar variáveis de ambiente usando `.env.example`.
-5. Fazer deploy.
+4. Site publicado: `https://marcenariaflow.netlify.app`.
+5. Variáveis de produção configuradas para a função `create-user`.
 
-Enquanto a integração Supabase no frontend não estiver completa, a versão publicada continua sendo o MVP visual com persistência local.
+O app publicado já usa Supabase para login, cadastro de pessoas e dados operacionais. O modo demonstração local continua disponível apenas para apresentação sem dados reais.
+
+## Segurança Pós-Implantação
+
+Depois de validar o acesso publicado:
+
+- Revogar o Supabase access token usado na implantação.
+- Rotacionar a chave `service_role` e atualizar a variável `SUPABASE_SERVICE_ROLE_KEY` no Netlify.
+- Rotacionar ou revogar o token pessoal do Netlify usado na implantação.
+- Alterar a senha do usuário técnico/ADM.
+- Criar o ADM real do cliente e operar o dia a dia por esse acesso.
 
 ## Rotina Do Piloto
 
@@ -160,4 +169,3 @@ Prioridade 3:
 - Gestão de assinatura.
 - Onboarding automático.
 - Templates por tipo de marcenaria.
-

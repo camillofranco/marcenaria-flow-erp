@@ -16,26 +16,29 @@ Depois acesse `http://localhost:4173`.
 
 ## Estado atual
 
-- MVP visual funcional.
+- Piloto real publicado e conectado ao Supabase.
 - Repositório publicado no GitHub.
 - Deploy público no Netlify: `https://marcenariaflow.netlify.app`.
 - Documentação de piloto criada.
-- Estrutura Supabase preparada para banco real.
-- Configuração Netlify adicionada.
+- Supabase Auth ativo para login.
+- Supabase Postgres ativo para usuários, projetos, ambientes, compras, alertas e arquivos.
+- Row Level Security configurado por empresa e perfil.
+- Netlify Function criada para que apenas ADM cadastre acessos.
 - Roadmap SaaS definido.
 
 ## O que está implementado
 
-- Perfis: ADM, Medidor, Projetista, Comprador e Montador.
-- Filtro de acesso por perfil, simulando `USEREMAIL()` do AppSheet.
+- Perfis: ADM, Medidor, Projetista, Comprador, Montador e Cliente.
+- Login real com Supabase Auth.
+- Filtro de acesso por perfil usando a sessão autenticada.
 - Cards de projetos com responsáveis, status, endereço, data de montagem e ambientes.
 - Checklists de projeto e montagem por ambiente.
 - Fotos de medição simuladas por ambiente.
 - Lista de compras com aprovação ADM e status de compra.
 - Alertas por criticidade: crítico, atenção e informativo.
-- Organização simulada de Drive: `Projetos / Nº - Cliente / Etapa / Ambiente`.
-- Persistência local no navegador via `localStorage`.
-- Exportação/importação de backup JSON para transportar dados do piloto.
+- Cadastro real de pessoas feito pelo ADM.
+- Organização de arquivos registrada por categoria: medição, engenharia e obra.
+- Modo demonstração local disponível apenas como plano B.
 
 ## Próximo passo operacional
 
@@ -43,15 +46,15 @@ Para operar com o primeiro cliente real, siga:
 
 1. Leia `docs/OPERACAO_PILOTO_REAL.md`.
 2. Preencha `data/projetos_piloto_template.csv` com 3 a 5 projetos reais.
-3. Crie o projeto Supabase.
-4. Rode os scripts em `supabase/`.
-5. Cadastre usuários reais.
-6. Publique no Netlify.
+3. Entre no app publicado com o usuário técnico/ADM.
+4. Cadastre o primeiro ADM real da marcenaria.
+5. Cadastre a equipe e os clientes com acesso.
+6. Crie 3 a 5 projetos reais.
 7. Acompanhe o uso por uma semana.
 
 ## Arquitetura recomendada para piloto real
 
-- Frontend: webapp atual, evoluindo para integração real.
+- Frontend: webapp atual publicado no Netlify.
 - Banco: Supabase Postgres.
 - Login: Supabase Auth.
 - Permissões: Supabase Row Level Security.

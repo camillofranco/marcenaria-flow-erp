@@ -2,13 +2,13 @@
 
 ## Agora
 
-- Conectar frontend ao Supabase.
-- Criar tela de login.
-- Trocar seletor manual de perfil por usuário autenticado.
-- Buscar projetos reais por perfil.
-- Salvar alterações no banco.
-- Implementar upload de arquivos.
-- Criar tela de administração de usuários.
+- Testar RLS com usuários reais de todos os perfis.
+- Implementar upload real de fotos por ambiente.
+- Implementar upload real de arquivos de engenharia e obra.
+- Criar edição completa de projetos, ambientes e pessoas.
+- Criar convites/redefinição de senha para usuários.
+- Preparar importação inicial de projetos por CSV.
+- Melhorar estados de loading, erro e vazio.
 
 ## Banco
 
@@ -55,4 +55,3 @@
 - Templates de implantação.
 - Logs internos de suporte.
 - Página comercial.
-
