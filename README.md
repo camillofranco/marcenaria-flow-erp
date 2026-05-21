@@ -226,6 +226,12 @@ Deploy manual:
 npx vercel --prod --yes
 ```
 
+Smoke test de seguranca apos deploy:
+
+```bash
+node scripts/security-smoke.mjs
+```
+
 Arquivos relevantes:
 
 - `vercel.json`: headers e rewrites.

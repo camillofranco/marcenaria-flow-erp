@@ -125,6 +125,20 @@ Ela endurece:
 - Insercao de arquivos por membros do projeto.
 - Storage privado por `company_id` e `project_id`, nao apenas por empresa.
 
+### Smoke Test De Seguranca
+
+Criado script:
+
+- `scripts/security-smoke.mjs`
+
+Ele valida:
+
+- Headers de seguranca em producao.
+- APIs administrativas bloqueando GET.
+- `Cache-Control: no-store` nas APIs.
+- Manifest PWA disponivel.
+- Service worker sem cache de `/api/*`.
+
 ## Achados Por Severidade
 
 ### Critico
@@ -309,6 +323,7 @@ node --check api/manage-user.js
 node --check sw.js
 python3 -m json.tool vercel.json >/dev/null
 python3 -m json.tool manifest.webmanifest >/dev/null
+node scripts/security-smoke.mjs
 ```
 
 ## Recomendacao De Go/No-Go

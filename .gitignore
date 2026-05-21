@@ -1,6 +1,8 @@
-marcenaria-flow-erp.zip
+*.zip
 .DS_Store
 .env
+.env.*
+!.env.example
 config.js
 .netlify/
 supabase/.temp/
