@@ -11,7 +11,7 @@
     <link rel="icon" href="./assets/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="./assets/favicon.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./styles.css?v=20260522-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260522-2" />
   </head>
   <body>
     <section class="auth-gate" id="authGate">
@@ -141,10 +141,11 @@
 
     <dialog id="projectDialog" class="modal">
       <form method="dialog" class="modal-body" id="projectForm">
+        <input name="id" type="hidden" />
         <div class="modal-header">
           <div>
-            <p class="eyebrow">Abertura ADM</p>
-            <h2>Novo projeto</h2>
+            <p class="eyebrow" id="projectDialogEyebrow">Abertura ADM</p>
+            <h2 id="projectDialogTitle">Novo projeto</h2>
           </div>
           <button class="icon-button" data-close-dialog="projectDialog" aria-label="Fechar" type="button">×</button>
         </div>
@@ -177,6 +178,19 @@
             <input name="installDate" type="date" />
           </label>
           <label>
+            Status operacional
+            <select name="status">
+              <option value="abertura">Abertura</option>
+              <option value="medicao">Medição técnica</option>
+              <option value="desenvolvimento">Em desenvolvimento</option>
+              <option value="compras">Compras</option>
+              <option value="fabrica">Fábrica</option>
+              <option value="montagem">Montagem</option>
+              <option value="assistencia">Assistência</option>
+              <option value="concluido">Concluído</option>
+            </select>
+          </label>
+          <label>
             Medidor
             <select name="medidor"></select>
           </label>
@@ -203,7 +217,39 @@
         </div>
         <menu class="modal-actions">
           <button class="secondary-action" data-close-dialog="projectDialog" type="button">Cancelar</button>
-          <button class="primary-action" value="default" type="submit">Criar card</button>
+          <button class="primary-action" id="projectSubmitBtn" value="default" type="submit">Criar card</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="alertDialog" class="modal">
+      <form method="dialog" class="modal-body" id="alertForm">
+        <input name="projectId" type="hidden" />
+        <input name="alertId" type="hidden" />
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Alertas visuais</p>
+            <h2 id="alertDialogTitle">Novo alerta</h2>
+          </div>
+          <button class="icon-button" data-close-dialog="alertDialog" aria-label="Fechar" type="button">×</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            Nível
+            <select name="level">
+              <option value="critical">Crítico</option>
+              <option value="attention">Atenção</option>
+              <option value="info">Informativo</option>
+            </select>
+          </label>
+          <label class="wide">
+            Mensagem do alerta
+            <input name="title" required placeholder="Ex: Canos de gás na parede da cozinha" />
+          </label>
+        </div>
+        <menu class="modal-actions">
+          <button class="secondary-action" data-close-dialog="alertDialog" type="button">Cancelar</button>
+          <button class="primary-action" value="default" type="submit">Salvar alerta</button>
         </menu>
       </form>
     </dialog>
@@ -297,6 +343,6 @@
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./app.js?v=20260522-1"></script>
+    <script src="./app.js?v=20260522-2"></script>
   </body>
 </html>

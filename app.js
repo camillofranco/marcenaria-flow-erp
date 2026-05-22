@@ -32,7 +32,7 @@ const roleProfiles = {
 };
 
 const STORAGE_KEY = "marcenaria-flow-pilot-v2";
-const TOUR_VERSION = "v3";
+const TOUR_VERSION = "v4";
 const PRODUCTION_URL = "https://marcenaria-flow-erp.vercel.app";
 const SUPABASE_URL = "https://oouxuleswyfjqfczlouh.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_BX6RrygWROrTcdmjC8oKCw_gxre0b5e";
@@ -73,6 +73,12 @@ const searchInput = document.querySelector("#searchInput");
 const toast = document.querySelector("#toast");
 const dialog = document.querySelector("#projectDialog");
 const projectForm = document.querySelector("#projectForm");
+const projectDialogEyebrow = document.querySelector("#projectDialogEyebrow");
+const projectDialogTitle = document.querySelector("#projectDialogTitle");
+const projectSubmitBtn = document.querySelector("#projectSubmitBtn");
+const alertDialog = document.querySelector("#alertDialog");
+const alertForm = document.querySelector("#alertForm");
+const alertDialogTitle = document.querySelector("#alertDialogTitle");
 const personDialog = document.querySelector("#personDialog");
 const personForm = document.querySelector("#personForm");
 const personDialogTitle = document.querySelector("#personDialogTitle");
@@ -127,22 +133,27 @@ let tourIndex = 0;
 
 const tourSteps = {
   adm: [
-    { selector: "#newProjectBtn", title: "Abrir projeto", text: "Crie o card do cliente com número, endereço, data de montagem, ambientes e todos os responsáveis. Esse vínculo define o que cada usuário poderá ver.", side: "right" },
-    { selector: "#newPersonBtn", title: "Gerir acessos", text: "Cadastre, altere ou desative usuários reais. O ADM controla perfis de medidor, projetista, comprador, montador, cliente e outros ADMs.", side: "right" },
+    { selector: "#newProjectBtn", title: "Abrir projeto", text: "Crie o card do cliente com número, endereço, agenda ativa, data de medição, data de montagem, ambientes e responsáveis.", side: "right" },
+    { selector: "#projectList", title: "Editar projeto", text: "Clique em um card e use Editar projeto no painel lateral para alterar datas, status, responsáveis, cliente vinculado e ambientes.", side: "right" },
+    { selector: "#detailPanel", title: "Agenda do card", text: "A agenda ativa define qual data aparece no card. O ADM pode alternar entre medição e montagem a qualquer momento.", side: "left" },
+    { selector: "#detailPanel", title: "Alertas visuais", text: "Use Novo alerta para registrar riscos críticos, atenção ou informação. Quando houver alerta crítico aberto, o card fica vermelho automaticamente.", side: "left" },
+    { selector: "#newPersonBtn", title: "Gerir acessos", text: "Cadastre, altere ou exclua usuários reais. O ADM controla perfis de medidor, projetista, comprador, montador, cliente e outros ADMs.", side: "right" },
     { selector: "#roleSelect", title: "Visão por perfil", text: "No acesso real, o usuário comum fica travado no próprio perfil. O programador admin pode alternar a visão para validar a operação.", side: "right" },
     { selector: "[data-view='purchases']", title: "Compras e aprovação", text: "Acompanhe materiais solicitados pelo projetista, aprove compras e libere apenas o que o comprador deve executar.", side: "right" },
-    { selector: "[data-view='alerts']", title: "Alertas críticos", text: "Centralize riscos de obra, assistência e pendências. Alertas vermelhos devem ser tratados antes da montagem avançar.", side: "right" },
+    { selector: "[data-view='alerts']", title: "Central de alertas", text: "Nesta visão ficam reunidas as ocorrências críticas, atenção e informações de obra para o ADM priorizar antes da equipe avançar.", side: "right" },
     { selector: "#searchInput", title: "Busca operacional", text: "Filtre rapidamente por número do projeto, cliente ou endereço, sempre respeitando a permissão do usuário logado.", side: "left" },
   ],
   medidor: [
     { selector: "[data-view='projects']", title: "Projetos atribuídos", text: "O medidor enxerga apenas obras onde foi vinculado pelo ADM. Sem vínculo, a tela fica vazia.", side: "right" },
-    { selector: "#projectList", title: "Medição técnica", text: "Abra o card na obra, confira os ambientes contratados e registre a medição separada por cômodo.", side: "right" },
-    { selector: "#detailPanel", title: "Fotos e liberação", text: "Use Abrir câmera para simular fotos de medição e Liberar projeto para enviar o trabalho ao projetista.", side: "left" },
+    { selector: "#projectList", title: "Medição técnica", text: "Abra o card na obra, confira cliente, endereço, agenda ativa e ambientes contratados antes de iniciar a medição.", side: "right" },
+    { selector: "#detailPanel", title: "Fotos e liberação", text: "Use Abrir câmera para registrar fotos por ambiente e Liberar projeto quando a medição estiver pronta para o projetista.", side: "left" },
+    { selector: "#detailPanel", title: "Alertas no detalhe", text: "Leia alertas antes de medir. Alertas críticos aparecem em vermelho e também deixam o card destacado.", side: "left" },
     { selector: "[data-view='drive']", title: "Pastas automáticas", text: "As fotos ficam organizadas por cliente, projeto, etapa de medição e ambiente.", side: "right" },
   ],
   projetista: [
     { selector: "[data-view='projects']", title: "Projetos liberados", text: "O projetista vê apenas projetos atribuídos a ele, já com as fotos e ambientes vindos da medição.", side: "right" },
     { selector: "#detailPanel", title: "Start e checklist", text: "Registre o início do desenvolvimento e marque ambiente por ambiente quando o técnico estiver concluído.", side: "left" },
+    { selector: "#detailPanel", title: "Alertas de projeto", text: "Crie alertas quando identificar risco técnico, mudança de obra ou informação importante para montagem.", side: "left" },
     { selector: "[data-view='purchases']", title: "Pedidos especiais", text: "Solicite ferragens, LEDs e materiais fora do padrão para análise e aprovação do ADM.", side: "right" },
     { selector: "[data-view='drive']", title: "Arquivos técnicos", text: "Separe arquivo de fábrica em Engenharia e arquivo de visualização em Obra para a equipe de montagem.", side: "right" },
   ],
@@ -153,7 +164,8 @@ const tourSteps = {
   ],
   montador: [
     { selector: "[data-view='projects']", title: "Roteiro de montagem", text: "O montador enxerga apenas obras onde foi escalado pelo ADM, com data, endereço e status.", side: "right" },
-    { selector: "#detailPanel", title: "Obra no celular", text: "Abra rota no Maps, consulte arquivos da pasta Obra, leia alertas e marque o checklist de montagem.", side: "left" },
+    { selector: "#detailPanel", title: "Obra no celular", text: "Abra rota no Maps, consulte arquivos da pasta Obra, leia alertas e marque o checklist de montagem por ambiente.", side: "left" },
+    { selector: "#projectList", title: "Card vermelho", text: "Quando existir alerta crítico aberto, o card aparece em vermelho para evitar que a equipe ignore riscos antes da execução.", side: "right" },
     { selector: "[data-view='alerts']", title: "Pendências e assistência", text: "Ao relatar pendência, o ADM recebe alerta vermelho para fabricar reposição ou tratar pós-venda.", side: "right" },
   ],
   cliente: [
@@ -457,6 +469,7 @@ function mapProject(project, rooms, purchases, alerts, files) {
         id: alert.id,
         level: alert.level,
         title: alert.title,
+        resolved: alert.resolved === true,
         source: personName(alert.created_by),
       })),
     files: projectFiles,
@@ -483,6 +496,10 @@ function projectSchedule(project) {
   return { type, date };
 }
 
+function hasCriticalAlert(project) {
+  return project.alerts.some((alert) => alert.level === "critical" && alert.resolved !== true);
+}
+
 function scheduleNotes({ scheduleType, measurementDate, installDate }) {
   return JSON.stringify({
     scheduleType: scheduleType === "medicao" ? "medicao" : "montagem",
@@ -502,6 +519,13 @@ function validateSchedule(formData) {
   return { scheduleType, measurementDate, installDate, activeDate };
 }
 
+function roomsFromForm(formData) {
+  return String(formData.get("rooms") || "Ambiente 1")
+    .split(",")
+    .map((room) => room.trim())
+    .filter(Boolean);
+}
+
 async function createProjectBackend(formData, rooms) {
   const schedule = validateSchedule(formData);
   const { data: project, error } = await supabaseClient
@@ -512,7 +536,6 @@ async function createProjectBackend(formData, rooms) {
       client_name: String(formData.get("client")).trim(),
       address: String(formData.get("address")).trim(),
       install_date: schedule.installDate || schedule.measurementDate,
-      status: "medicao",
       medidor_id: nullIfEmpty(formData.get("medidor")),
       projetista_id: nullIfEmpty(formData.get("projetista")),
       comprador_id: nullIfEmpty(formData.get("comprador")),
@@ -520,6 +543,7 @@ async function createProjectBackend(formData, rooms) {
       cliente_id: nullIfEmpty(formData.get("clienteUser")),
       notes: scheduleNotes(schedule),
       created_by: state.profile.id,
+      status: formData.get("status") || "medicao",
     })
     .select()
     .single();
@@ -546,6 +570,50 @@ async function createProjectBackend(formData, rooms) {
   });
 
   state.selectedProjectId = project.id;
+  await loadBackendData();
+}
+
+async function updateProjectBackend(formData, rooms) {
+  const projectId = String(formData.get("id") || "");
+  const current = getProject(projectId);
+  if (!current) throw new Error("Projeto não encontrado para edição.");
+  const schedule = validateSchedule(formData);
+  const { error } = await supabaseClient
+    .from("projects")
+    .update({
+      project_number: String(formData.get("number")).trim(),
+      client_name: String(formData.get("client")).trim(),
+      address: String(formData.get("address")).trim(),
+      install_date: schedule.installDate || schedule.measurementDate,
+      status: formData.get("status") || current.status,
+      medidor_id: nullIfEmpty(formData.get("medidor")),
+      projetista_id: nullIfEmpty(formData.get("projetista")),
+      comprador_id: nullIfEmpty(formData.get("comprador")),
+      montador_id: nullIfEmpty(formData.get("montador")),
+      cliente_id: nullIfEmpty(formData.get("clienteUser")),
+      notes: scheduleNotes(schedule),
+    })
+    .eq("id", projectId);
+  if (error) throw error;
+
+  const existingRooms = current.rooms || [];
+  const updates = rooms.map((name, index) => {
+    const existing = existingRooms[index];
+    if (existing?.id) {
+      return supabaseClient.from("rooms").update({ name, sort_order: index + 1 }).eq("id", existing.id);
+    }
+    return supabaseClient.from("rooms").insert({
+      company_id: state.companyId,
+      project_id: projectId,
+      name,
+      sort_order: index + 1,
+    });
+  });
+  const results = await Promise.all(updates);
+  const failed = results.find((result) => result.error);
+  if (failed) throw failed.error;
+
+  state.selectedProjectId = projectId;
   await loadBackendData();
 }
 
@@ -770,6 +838,56 @@ function populateProjectFormPeople() {
   fillRoleSelect(projectForm.elements.clienteUser, "cliente");
 }
 
+function openProjectDialog(project = null) {
+  if (state.backendMode && !requireAdmin()) {
+    showToast("Somente administradores podem abrir ou editar projetos.");
+    return;
+  }
+  projectForm.reset();
+  populateProjectFormPeople();
+  const editing = Boolean(project);
+  projectDialogEyebrow.textContent = editing ? "Edição ADM" : "Abertura ADM";
+  projectDialogTitle.textContent = editing ? "Editar projeto" : "Novo projeto";
+  projectSubmitBtn.textContent = editing ? "Salvar alterações" : "Criar card";
+
+  projectForm.elements.id.value = project?.id || "";
+  projectForm.elements.number.value = project?.number || "";
+  projectForm.elements.client.value = project?.client || "";
+  projectForm.elements.address.value = project?.address || "";
+  projectForm.elements.scheduleType.value = project?.scheduleType || "medicao";
+  projectForm.elements.measurementDate.value = project?.measurementDate || "";
+  projectForm.elements.installDate.value = project?.installDate || "";
+  projectForm.elements.status.value = project?.status || "medicao";
+  projectForm.elements.medidor.value = project?.medidorId || "";
+  projectForm.elements.projetista.value = project?.projetistaId || "";
+  projectForm.elements.comprador.value = project?.compradorId || "";
+  projectForm.elements.montador.value = project?.montadorId || "";
+  projectForm.elements.clienteUser.value = project?.clienteUserId || "";
+  projectForm.elements.rooms.value = project?.rooms?.map((room) => room.name).join(", ") || "";
+  dialog.showModal();
+}
+
+function openAlertDialog(projectId, alertId = "") {
+  const project = getProject(projectId);
+  if (!project) return;
+  if (!["adm", "projetista"].includes(state.role)) {
+    showToast("Somente ADM e projetista podem criar alertas.");
+    return;
+  }
+  if (alertId && !requireAdmin()) {
+    showToast("Somente administradores podem editar alertas existentes.");
+    return;
+  }
+  const alert = project.alerts.find((item) => item.id === alertId);
+  alertForm.reset();
+  alertDialogTitle.textContent = alert ? "Editar alerta" : "Novo alerta";
+  alertForm.elements.projectId.value = projectId;
+  alertForm.elements.alertId.value = alert?.id || "";
+  alertForm.elements.level.value = alert?.level || "critical";
+  alertForm.elements.title.value = alert?.title || "";
+  alertDialog.showModal();
+}
+
 function renderPeople() {
   renderMetrics(filteredProjects());
   const visiblePeople = state.people.filter((person) => person.active !== false);
@@ -861,7 +979,8 @@ function renderTour() {
   }, 110);
 }
 
-function closeTour() {
+function closeTour(markDone = false) {
+  if (markDone) localStorage.setItem(tourKey(), "done");
   clearTourTarget();
   tourLayer.hidden = true;
 }
@@ -932,7 +1051,8 @@ function maybeOpenFirstAccessTour() {
 }
 
 function tourKey() {
-  return `marcenaria-flow-tour-${TOUR_VERSION}-${state.role}`;
+  const identity = state.backendMode ? state.profile?.email || state.profile?.id || "real" : state.activePersonId || "local";
+  return `marcenaria-flow-tour-${TOUR_VERSION}-${state.role}-${identity}`;
 }
 
 function renderProjects() {
@@ -959,12 +1079,14 @@ function renderProjects() {
     .map(
       (project) => {
         const schedule = projectSchedule(project);
+        const critical = hasCriticalAlert(project);
         return `
-      <article class="project-card ${project.id === state.selectedProjectId ? "active" : ""}" data-project-id="${escapeAttr(project.id)}">
+      <article class="project-card ${project.id === state.selectedProjectId ? "active" : ""} ${critical ? "has-critical-alert" : ""}" data-project-id="${escapeAttr(project.id)}">
         <div>
           <h3>${escapeHtml(project.number)} · ${escapeHtml(project.client)}</h3>
           <p class="meta">${escapeHtml(project.address)}</p>
           <div class="project-tags">
+            ${critical ? `<span class="alert-pill critical">Alerta crítico</span>` : ""}
             <span class="tag">${scheduleLabels[schedule.type]} ${formatDate(schedule.date)}</span>
             <span class="tag">Medidor ${escapeHtml(personName(project.medidorId))}</span>
             <span class="tag">Projetista ${escapeHtml(personName(project.projetistaId))}</span>
@@ -1006,6 +1128,7 @@ function renderDetail() {
         ${project.installDate ? `<span class="tag">Montagem ${formatDate(project.installDate)}</span>` : ""}
       </div>
       <div class="action-row">
+        ${requireAdmin() ? `<button class="secondary-action" data-action="editProject" type="button">Editar projeto</button>` : ""}
         ${roleActionButtons(project)}
       </div>
     </div>
@@ -1017,6 +1140,10 @@ function renderDetail() {
 
   detailPanel.querySelectorAll("[data-action]").forEach((button) => {
     button.addEventListener("click", () => handleAction(button.dataset.action, project.id, button.dataset.extra));
+  });
+
+  detailPanel.querySelectorAll("[data-edit-alert]").forEach((button) => {
+    button.addEventListener("click", () => openAlertDialog(project.id, button.dataset.editAlert));
   });
 
   detailPanel.querySelectorAll("[data-check]").forEach((input) => {
@@ -1033,7 +1160,7 @@ function roleActionButtons(project) {
   const actions = {
     adm: `
       <button class="primary-action" data-action="approveAll" type="button">Aprovar compras</button>
-      <button class="secondary-action" data-action="addCriticalAlert" type="button">Alerta crítico</button>
+      <button class="secondary-action" data-action="openAlert" type="button">Novo alerta</button>
       <button class="secondary-action" data-action="setSchedule" data-extra="medicao" type="button">Usar data medição</button>
       <button class="secondary-action" data-action="setSchedule" data-extra="montagem" type="button">Usar data montagem</button>
     `,
@@ -1043,6 +1170,7 @@ function roleActionButtons(project) {
     `,
     projetista: `
       <button class="primary-action" data-action="startDesign" type="button">Start</button>
+      <button class="secondary-action" data-action="openAlert" type="button">Novo alerta</button>
       <button class="secondary-action" data-action="requestPurchase" type="button">Solicitar material</button>
       <button class="secondary-action" data-action="uploadFiles" type="button">Anexar ficheiros</button>
     `,
@@ -1124,11 +1252,11 @@ function renderPurchases(project) {
 }
 
 function renderAlerts(project) {
-  return `
-    <section class="detail-block">
-      <h3>Alertas visuais</h3>
-      <div class="alert-list">
-        ${project.alerts
+  const canEditAlerts = requireAdmin();
+  const alerts =
+    project.alerts.length === 0
+      ? `<div class="empty-state">Nenhum alerta registrado para este projeto.</div>`
+      : project.alerts
           .map(
             (alert) => `
             <article class="alert-item alert-${escapeAttr(alert.level)}">
@@ -1136,12 +1264,18 @@ function renderAlerts(project) {
                 <strong>${escapeHtml(alert.title)}</strong>
                 <span class="meta">Criado por ${escapeHtml(alert.source)}</span>
               </div>
-              <span class="alert-pill ${escapeAttr(alert.level)}">${escapeHtml(alertLabels[alert.level] || alert.level)}</span>
+              <div class="project-tags">
+                <span class="alert-pill ${escapeAttr(alert.level)}">${escapeHtml(alertLabels[alert.level] || alert.level)}</span>
+                ${canEditAlerts ? `<button class="secondary-action compact-action" data-edit-alert="${escapeAttr(alert.id)}" type="button">Editar</button>` : ""}
+              </div>
             </article>
           `,
           )
-          .join("")}
-      </div>
+          .join("");
+  return `
+    <section class="detail-block">
+      <h3>Alertas visuais</h3>
+      <div class="alert-list">${alerts}</div>
     </section>
   `;
 }
@@ -1184,6 +1318,16 @@ function renderDrive(project) {
 async function handleAction(action, projectId, extra = "") {
   const project = state.projects.find((item) => item.id === projectId);
   if (!project) return;
+
+  if (action === "editProject") {
+    openProjectDialog(project);
+    return;
+  }
+
+  if (action === "openAlert") {
+    openAlertDialog(project.id);
+    return;
+  }
 
   if (isRealBackend()) {
     try {
@@ -1419,6 +1563,40 @@ async function handleBackendAction(action, project, extra = "") {
   }
 }
 
+async function saveAlertFromForm(formData) {
+  const projectId = String(formData.get("projectId") || "");
+  const alertId = String(formData.get("alertId") || "");
+  const title = String(formData.get("title") || "").trim();
+  const level = ["critical", "attention", "info"].includes(formData.get("level")) ? formData.get("level") : "critical";
+  const project = getProject(projectId);
+  if (!project) throw new Error("Projeto não encontrado para o alerta.");
+  if (!title) throw new Error("Informe a mensagem do alerta.");
+
+  if (isRealBackend()) {
+    const payload = { level, title };
+    const result = alertId
+      ? await supabaseClient.from("alerts").update(payload).eq("id", alertId)
+      : await supabaseClient.from("alerts").insert({
+          company_id: state.companyId,
+          project_id: projectId,
+          level,
+          title,
+          created_by: state.profile.id,
+        });
+    if (result.error) throw result.error;
+    await loadBackendData();
+    return;
+  }
+
+  if (alertId) {
+    const alert = project.alerts.find((item) => item.id === alertId);
+    if (alert) Object.assign(alert, { level, title, source: activePerson()?.name || "ADM" });
+  } else {
+    project.alerts.unshift({ id: `a-${Date.now()}`, level, title, source: activePerson()?.name || "ADM", resolved: false });
+  }
+  persistPilotData();
+}
+
 async function updateRoomCheck(projectId, roomName, key, checked) {
   const room = findRoom(projectId, roomName);
   if (!room) return;
@@ -1550,12 +1728,7 @@ searchInput.addEventListener("input", () => {
 });
 
 newProjectBtn.addEventListener("click", () => {
-  if (state.backendMode && !requireAdmin()) {
-    showToast("Somente administradores podem abrir novos projetos.");
-    return;
-  }
-  populateProjectFormPeople();
-  dialog.showModal();
+  openProjectDialog();
 });
 
 newPersonBtn.addEventListener("click", () => {
@@ -1579,7 +1752,7 @@ importDataInput.addEventListener("change", () => {
 });
 
 tourBtn.addEventListener("click", openTour);
-tourCloseBtn.addEventListener("click", closeTour);
+tourCloseBtn.addEventListener("click", () => closeTour(true));
 tourNextBtn.addEventListener("click", nextTourStep);
 tourPrevBtn.addEventListener("click", previousTourStep);
 window.addEventListener("resize", () => {
@@ -1672,6 +1845,7 @@ projectForm.addEventListener("submit", async (event) => {
   if (event.submitter?.value === "cancel") return;
   event.preventDefault();
   const formData = new FormData(projectForm);
+  const editingId = String(formData.get("id") || "").trim();
   let schedule;
   try {
     schedule = validateSchedule(formData);
@@ -1679,21 +1853,55 @@ projectForm.addEventListener("submit", async (event) => {
     showToast(error.message);
     return;
   }
-  const rooms = String(formData.get("rooms") || "Ambiente 1")
-    .split(",")
-    .map((room) => room.trim())
-    .filter(Boolean);
+  const rooms = roomsFromForm(formData);
   if (isRealBackend()) {
     try {
-      await createProjectBackend(formData, rooms);
+      if (editingId) {
+        await updateProjectBackend(formData, rooms);
+      } else {
+        await createProjectBackend(formData, rooms);
+      }
       projectForm.reset();
       dialog.close();
-      showToast("Card real criado com ambientes e permissões.");
+      showToast(editingId ? "Projeto atualizado com sucesso." : "Card real criado com ambientes e permissões.");
     } catch (error) {
-      showToast(friendlyError(error, "Não foi possível criar o projeto."));
+      showToast(friendlyError(error, editingId ? "Não foi possível atualizar o projeto." : "Não foi possível criar o projeto."));
     }
     return;
   }
+
+  if (editingId) {
+    const project = getProject(editingId);
+    if (!project) {
+      showToast("Projeto não encontrado para edição.");
+      return;
+    }
+    Object.assign(project, {
+      number: formData.get("number"),
+      client: formData.get("client"),
+      address: formData.get("address"),
+      installDate: schedule.installDate,
+      measurementDate: schedule.measurementDate,
+      scheduleType: schedule.scheduleType,
+      status: formData.get("status") || project.status,
+      medidorId: formData.get("medidor"),
+      projetistaId: formData.get("projetista"),
+      compradorId: formData.get("comprador"),
+      montadorId: formData.get("montador"),
+      clienteUserId: formData.get("clienteUser"),
+      rooms: rooms.map((name, index) => project.rooms[index] || { name, measurementPhotos: 0, designDone: false, installDone: false, supportNote: "" }),
+    });
+    project.rooms.forEach((room, index) => {
+      room.name = rooms[index] || room.name;
+    });
+    projectForm.reset();
+    dialog.close();
+    persistPilotData();
+    showToast("Projeto atualizado com sucesso.");
+    renderProjects();
+    return;
+  }
+
   const project = {
     id: `p-${Date.now()}`,
     number: formData.get("number"),
@@ -1702,7 +1910,7 @@ projectForm.addEventListener("submit", async (event) => {
     installDate: schedule.installDate,
     measurementDate: schedule.measurementDate,
     scheduleType: schedule.scheduleType,
-    status: "medicao",
+    status: formData.get("status") || "medicao",
     medidorId: formData.get("medidor"),
     projetistaId: formData.get("projetista"),
     compradorId: formData.get("comprador"),
@@ -1721,6 +1929,22 @@ projectForm.addEventListener("submit", async (event) => {
   persistPilotData();
   showToast("Card criado com ambientes e pastas-base do Drive.");
   renderProjects();
+});
+
+alertForm.addEventListener("submit", async (event) => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  const formData = new FormData(alertForm);
+  const editing = Boolean(String(formData.get("alertId") || ""));
+  try {
+    await saveAlertFromForm(formData);
+    alertForm.reset();
+    alertDialog.close();
+    showToast(editing ? "Alerta atualizado com sucesso." : "Alerta criado e destacado no projeto.");
+    renderProjects();
+  } catch (error) {
+    showToast(friendlyError(error, "Não foi possível salvar o alerta."));
+  }
 });
 
 personForm.addEventListener("submit", async (event) => {
