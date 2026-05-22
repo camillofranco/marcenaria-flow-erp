@@ -740,7 +740,7 @@ function renderMetrics(projects) {
     project.purchases.filter((item) => item.approval === "pendente"),
   );
   const criticalAlerts = visibleProjects.flatMap((project) =>
-    project.alerts.filter((alert) => alert.level === "critical"),
+    project.alerts.filter((alert) => alert.level === "critical" && alert.resolved !== true),
   );
 
   const items = [
@@ -1122,6 +1122,11 @@ function renderProjects() {
     if (projectId) button.addEventListener("click", () => openAlertDialog(projectId, button.dataset.editAlert));
   });
 
+  projectList.querySelectorAll("[data-delete-alert]").forEach((button) => {
+    const projectId = button.closest("[data-project-id]")?.dataset.projectId;
+    if (projectId) button.addEventListener("click", () => deleteAlert(projectId, button.dataset.deleteAlert));
+  });
+
   projectList.querySelectorAll("[data-check]").forEach((input) => {
     const projectId = input.closest("[data-project-id]")?.dataset.projectId;
     if (projectId) input.addEventListener("change", () => updateRoomCheck(projectId, input.dataset.room, input.dataset.check, input.checked));
@@ -1256,10 +1261,11 @@ function renderPurchases(project) {
 
 function renderAlerts(project) {
   const canEditAlerts = requireAdmin();
+  const visibleAlerts = project.alerts.filter((alert) => alert.resolved !== true);
   const alerts =
-    project.alerts.length === 0
+    visibleAlerts.length === 0
       ? `<div class="empty-state">Nenhum alerta registrado para este projeto.</div>`
-      : project.alerts
+      : visibleAlerts
           .map(
             (alert) => `
             <article class="alert-item alert-${escapeAttr(alert.level)}">
@@ -1267,9 +1273,10 @@ function renderAlerts(project) {
                 <strong>${escapeHtml(alert.title)}</strong>
                 <span class="meta">Criado por ${escapeHtml(alert.source)}</span>
               </div>
-              <div class="project-tags">
+              <div class="alert-actions">
                 <span class="alert-pill ${escapeAttr(alert.level)}">${escapeHtml(alertLabels[alert.level] || alert.level)}</span>
-                ${canEditAlerts ? `<button class="secondary-action compact-action" data-edit-alert="${escapeAttr(alert.id)}" type="button">Editar</button>` : ""}
+                ${canEditAlerts && alert.id ? `<button class="secondary-action compact-action" data-edit-alert="${escapeAttr(alert.id)}" type="button">Editar</button>` : ""}
+                ${canEditAlerts && alert.id ? `<button class="danger-action compact-action" data-delete-alert="${escapeAttr(alert.id)}" type="button">Excluir</button>` : ""}
               </div>
             </article>
           `,
@@ -1600,6 +1607,39 @@ async function saveAlertFromForm(formData) {
   persistPilotData();
 }
 
+async function deleteAlert(projectId, alertId) {
+  if (!requireAdmin()) {
+    showToast("Somente administradores podem excluir alertas.");
+    return;
+  }
+  const project = getProject(projectId);
+  const alert = project?.alerts.find((item) => item.id === alertId);
+  if (!project || !alert) return;
+  const confirmed = window.confirm(`Excluir o alerta "${alert.title}" deste projeto?`);
+  if (!confirmed) return;
+
+  if (isRealBackend()) {
+    try {
+      const { error } = await supabaseClient
+        .from("alerts")
+        .update({ resolved: true, resolved_at: new Date().toISOString() })
+        .eq("id", alertId);
+      if (error) throw error;
+      await loadBackendData();
+      renderProjects();
+      showToast("Alerta excluído da interface do projeto.");
+    } catch (error) {
+      showToast(friendlyError(error, "Não foi possível excluir o alerta."));
+    }
+    return;
+  }
+
+  project.alerts = project.alerts.filter((item) => item.id !== alertId);
+  persistPilotData();
+  renderProjects();
+  showToast("Alerta excluído do projeto.");
+}
+
 async function updateRoomCheck(projectId, roomName, key, checked) {
   const room = findRoom(projectId, roomName);
   if (!room) return;
@@ -1922,7 +1962,7 @@ projectForm.addEventListener("submit", async (event) => {
     startedAt: "",
     rooms: rooms.map((name) => ({ name, measurementPhotos: 0, designDone: false, installDone: false, supportNote: "" })),
     purchases: [],
-    alerts: [{ level: "info", title: "Projeto criado pelo ADM", source: "ADM" }],
+    alerts: [{ id: `a-${Date.now()}`, level: "info", title: "Projeto criado pelo ADM", source: "ADM", resolved: false }],
     files: { medicao: [], engenharia: [], obra: [] },
   };
   state.projects.unshift(project);

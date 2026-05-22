@@ -559,6 +559,15 @@ h2 {
   animation: expandFade 0.18s ease both;
 }
 
+.project-expanded > .project-tags {
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.project-expanded > .action-row {
+  align-items: center;
+}
+
 .project-card.has-critical-alert {
   border-color: rgba(174, 46, 36, 0.62);
   background:
@@ -678,8 +687,17 @@ h2 {
 .folder {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
+}
+
+.alert-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .room-header strong,
@@ -1172,6 +1190,12 @@ h2 {
 
   .action-row {
     width: 100%;
+  }
+
+  .alert-actions {
+    width: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
   }
 
   .action-row .primary-action,
