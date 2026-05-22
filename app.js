@@ -130,6 +130,42 @@ const scheduleLabels = {
   montagem: "Montagem",
 };
 
+const projectFlow = ["abertura", "medicao", "desenvolvimento", "compras", "fabrica", "montagem", "assistencia", "concluido"];
+
+const checklistByRole = {
+  adm: [
+    ["Projeto aberto", (project) => Boolean(project.number && project.client)],
+    ["Responsáveis vinculados", (project) => [project.medidorId, project.projetistaId, project.montadorId].every(Boolean)],
+    ["Compras pendentes revisadas", (project) => !project.purchases.some((item) => item.approval === "pendente")],
+    ["Alertas críticos tratados", (project) => !hasCriticalAlert(project)],
+  ],
+  medidor: [
+    ["Ambientes conferidos", (project) => project.rooms.length > 0],
+    ["Fotos de medição registradas", (project) => project.rooms.length > 0 && project.rooms.every((room) => Number(room.measurementPhotos) > 0)],
+    ["Projeto liberado", (project) => project.status !== "medicao" && project.status !== "abertura"],
+  ],
+  projetista: [
+    ["Start registrado", (project) => Boolean(project.startedAt) || ["desenvolvimento", "compras", "fabrica", "montagem", "concluido"].includes(project.status)],
+    ["Ambientes de projeto concluídos", (project) => project.rooms.length > 0 && project.rooms.every((room) => room.designDone)],
+    ["Arquivos técnicos adicionados", (project) => (project.files.engenharia || []).length > 0 && (project.files.obra || []).length > 0],
+  ],
+  comprador: [
+    ["Compras aprovadas pelo ADM", (project) => project.purchases.some((item) => item.approval === "aprovado")],
+    ["Itens comprados", (project) => project.purchases.filter((item) => item.approval === "aprovado").every((item) => ["comprado", "entregue"].includes(item.purchaseStatus))],
+    ["Faturas anexadas", (project) => project.purchases.filter((item) => item.approval === "aprovado").every((item) => item.invoice)],
+  ],
+  montador: [
+    ["Rota e arquivos conferidos", (project) => Boolean(project.address) && (project.files.obra || []).length > 0],
+    ["Ambientes montados", (project) => project.rooms.length > 0 && project.rooms.every((room) => room.installDone)],
+    ["Pendências registradas", (project) => project.rooms.every((room) => room.installDone || room.supportNote)],
+  ],
+  cliente: [
+    ["Projeto em andamento", (project) => project.status !== "abertura"],
+    ["Previsão disponível", (project) => Boolean(project.installDate || project.measurementDate)],
+    ["Arquivos liberados", (project) => (project.files.obra || []).length > 0],
+  ],
+};
+
 let tourIndex = 0;
 
 const tourSteps = {
@@ -436,6 +472,8 @@ function mapProject(project, rooms, purchases, alerts, files) {
     installDate: project.install_date,
     measurementDate: notes.measurementDate || "",
     scheduleType: notes.scheduleType === "medicao" ? "medicao" : "montagem",
+    activity: Array.isArray(notes.activity) ? notes.activity : [],
+    notesData: notes,
     status: project.status,
     medidorId: project.medidor_id,
     projetistaId: project.projetista_id,
@@ -467,6 +505,7 @@ function mapProject(project, rooms, purchases, alerts, files) {
     alerts: alerts
       .filter((alert) => alert.project_id === project.id)
       .map((alert) => ({
+        ...parseAlertMeta(alert.description),
         id: alert.id,
         level: alert.level,
         title: alert.title,
@@ -501,12 +540,63 @@ function hasCriticalAlert(project) {
   return project.alerts.some((alert) => alert.level === "critical" && alert.resolved !== true);
 }
 
-function scheduleNotes({ scheduleType, measurementDate, installDate }) {
+function scheduleNotes({ scheduleType, measurementDate, installDate }, base = {}) {
   return JSON.stringify({
+    ...base,
     scheduleType: scheduleType === "medicao" ? "medicao" : "montagem",
     measurementDate: measurementDate || "",
     installDate: installDate || "",
   });
+}
+
+function parseAlertMeta(description) {
+  if (!description) return {};
+  try {
+    const data = JSON.parse(description);
+    return data && typeof data === "object" ? data : {};
+  } catch {
+    return { description };
+  }
+}
+
+function alertDescription({ assigneeId = "", dueDate = "", status = "open", description = "" } = {}) {
+  return JSON.stringify({ assigneeId, dueDate, status, description });
+}
+
+function actorName() {
+  return state.backendMode ? state.profile?.full_name || state.profile?.email || "Usuário" : activePerson()?.name || roleProfiles[state.role]?.label || "Usuário";
+}
+
+function addActivity(project, label) {
+  const item = {
+    id: `log-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    at: new Date().toISOString(),
+    actor: actorName(),
+    label,
+  };
+  project.activity = [item, ...(project.activity || [])].slice(0, 20);
+  project.notesData = { ...(project.notesData || {}), activity: project.activity };
+  return item;
+}
+
+function projectNotesPayload(project, schedule = projectSchedule(project)) {
+  return scheduleNotes(
+    {
+      scheduleType: schedule.type || project.scheduleType,
+      measurementDate: project.measurementDate,
+      installDate: project.installDate,
+    },
+    { ...(project.notesData || {}), activity: project.activity || [] },
+  );
+}
+
+async function persistProjectNotes(project) {
+  if (!isRealBackend()) {
+    persistPilotData();
+    return;
+  }
+  const { error } = await supabaseClient.from("projects").update({ notes: projectNotesPayload(project) }).eq("id", project.id);
+  if (error) throw error;
 }
 
 function validateSchedule(formData) {
@@ -542,7 +632,9 @@ async function createProjectBackend(formData, rooms) {
       comprador_id: nullIfEmpty(formData.get("comprador")),
       montador_id: nullIfEmpty(formData.get("montador")),
       cliente_id: nullIfEmpty(formData.get("clienteUser")),
-      notes: scheduleNotes(schedule),
+      notes: scheduleNotes(schedule, {
+        activity: [{ id: `log-${Date.now()}`, at: new Date().toISOString(), actor: actorName(), label: "Projeto criado" }],
+      }),
       created_by: state.profile.id,
       status: formData.get("status") || "medicao",
     })
@@ -567,6 +659,7 @@ async function createProjectBackend(formData, rooms) {
     project_id: project.id,
     level: "info",
     title: "Projeto criado pelo ADM",
+    description: alertDescription({ status: "open" }),
     created_by: state.profile.id,
   });
 
@@ -579,6 +672,10 @@ async function updateProjectBackend(formData, rooms) {
   const current = getProject(projectId);
   if (!current) throw new Error("Projeto não encontrado para edição.");
   const schedule = validateSchedule(formData);
+  const activity = [
+    { id: `log-${Date.now()}`, at: new Date().toISOString(), actor: actorName(), label: "Projeto atualizado" },
+    ...(current.activity || []),
+  ].slice(0, 20);
   const { error } = await supabaseClient
     .from("projects")
     .update({
@@ -592,7 +689,7 @@ async function updateProjectBackend(formData, rooms) {
       comprador_id: nullIfEmpty(formData.get("comprador")),
       montador_id: nullIfEmpty(formData.get("montador")),
       cliente_id: nullIfEmpty(formData.get("clienteUser")),
-      notes: scheduleNotes(schedule),
+      notes: scheduleNotes(schedule, { ...(current.notesData || {}), activity }),
     })
     .eq("id", projectId);
   if (error) throw error;
@@ -760,6 +857,37 @@ function renderMetrics(projects) {
     `,
     )
     .join("");
+
+  if (state.role === "adm") {
+    const overdue = visibleProjects.filter((project) => {
+      const schedule = projectSchedule(project);
+      return schedule.date && new Date(`${schedule.date}T23:59:59`) < new Date() && !["concluido", "assistencia"].includes(project.status);
+    });
+    const upcoming = visibleProjects.filter((project) => {
+      const schedule = projectSchedule(project);
+      if (!schedule.date) return false;
+      const diff = new Date(`${schedule.date}T12:00:00`) - new Date();
+      return diff >= 0 && diff <= 1000 * 60 * 60 * 24 * 7;
+    });
+    const unassigned = visibleProjects.filter((project) => !project.medidorId || !project.projetistaId || !project.montadorId);
+    const priorityItems = [
+      ["Projetos atrasados", overdue.length, "danger"],
+      ["Próximos 7 dias", upcoming.length, "attention"],
+      ["Sem responsável", unassigned.length, "info"],
+      ["Compras pendentes", pendingPurchases.length, "attention"],
+    ];
+    metrics.insertAdjacentHTML(
+      "beforeend",
+      `<article class="metric-card priority-card">
+        <span>Prioridades ADM</span>
+        <div class="priority-list">
+          ${priorityItems
+            .map(([label, value, tone]) => `<span class="priority-item ${tone}"><strong>${value}</strong>${label}</span>`)
+            .join("")}
+        </div>
+      </article>`,
+    );
+  }
 }
 
 function renderPersonSelect() {
@@ -881,10 +1009,19 @@ function openAlertDialog(projectId, alertId = "") {
   }
   const alert = project.alerts.find((item) => item.id === alertId);
   alertForm.reset();
+  alertForm.elements.assignee.innerHTML =
+    `<option value="">Sem responsável definido</option>` +
+    state.people
+      .filter((person) => person.active !== false && person.role !== "cliente")
+      .map((person) => `<option value="${escapeAttr(person.id)}">${escapeHtml(person.name)} · ${escapeHtml(roleProfiles[person.role]?.label || person.role)}</option>`)
+      .join("");
   alertDialogTitle.textContent = alert ? "Editar alerta" : "Novo alerta";
   alertForm.elements.projectId.value = projectId;
   alertForm.elements.alertId.value = alert?.id || "";
   alertForm.elements.level.value = alert?.level || "critical";
+  alertForm.elements.assignee.value = alert?.assigneeId || "";
+  alertForm.elements.dueDate.value = alert?.dueDate || "";
+  alertForm.elements.status.value = alert?.status || (alert?.resolved ? "done" : "open");
   alertForm.elements.title.value = alert?.title || "";
   alertDialog.showModal();
 }
@@ -1140,9 +1277,11 @@ function renderProjects() {
 
 function renderExpandedProject(project) {
   const schedule = projectSchedule(project);
+  if (state.role === "cliente") return renderClientProject(project, schedule);
 
   return `
     <div class="project-expanded">
+      ${renderProjectTimeline(project)}
       <div class="project-tags">
         <span class="tag">Agenda ativa: ${escapeHtml(scheduleLabels[schedule.type])}</span>
         ${project.measurementDate ? `<span class="tag">Medição ${formatDate(project.measurementDate)}</span>` : ""}
@@ -1156,10 +1295,89 @@ function renderExpandedProject(project) {
         ${roleActionButtons(project)}
       </div>
     </div>
+    ${renderOperationalChecklist(project)}
     ${renderRooms(project)}
     ${state.role === "cliente" ? "" : renderPurchases(project)}
     ${state.role === "cliente" ? "" : renderAlerts(project)}
     ${renderDrive(project)}
+    ${renderActivity(project)}
+  `;
+}
+
+function renderClientProject(project, schedule) {
+  const doneRooms = project.rooms.filter((room) => room.installDone || room.designDone).length;
+  const progress = project.rooms.length ? Math.round((doneRooms / project.rooms.length) * 100) : 0;
+  return `
+    <div class="project-expanded client-project">
+      ${renderProjectTimeline(project)}
+      <section class="client-summary">
+        <div>
+          <span class="eyebrow">Status da obra</span>
+          <strong>${escapeHtml(statusLabels[project.status] || project.status)}</strong>
+          <span class="meta">Próxima referência: ${escapeHtml(scheduleLabels[schedule.type])} ${formatDate(schedule.date)}</span>
+        </div>
+        <div class="progress-ring" style="--progress:${progress}%">
+          <strong>${progress}%</strong>
+          <span>evolução</span>
+        </div>
+      </section>
+      ${renderOperationalChecklist(project)}
+      ${renderRooms(project)}
+      ${renderDrive(project)}
+    </div>
+  `;
+}
+
+function renderProjectTimeline(project) {
+  const currentIndex = Math.max(0, projectFlow.indexOf(project.status));
+  return `
+    <ol class="timeline" aria-label="Linha do tempo do projeto">
+      ${projectFlow
+        .map((status, index) => {
+          const stateClass = index < currentIndex ? "done" : index === currentIndex ? "current" : "future";
+          return `<li class="${stateClass}"><span></span><strong>${escapeHtml(statusLabels[status] || status)}</strong></li>`;
+        })
+        .join("")}
+    </ol>
+  `;
+}
+
+function renderOperationalChecklist(project) {
+  const items = checklistByRole[state.role] || checklistByRole.adm;
+  return `
+    <section class="detail-block checklist-panel">
+      <h3>Checklist ${escapeHtml(roleProfiles[state.role]?.label || "Operacional")}</h3>
+      <div class="checklist-grid">
+        ${items
+          .map(([label, test]) => {
+            const done = Boolean(test(project));
+            return `<span class="check-item ${done ? "done" : ""}"><i>${done ? "✓" : "•"}</i>${escapeHtml(label)}</span>`;
+          })
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderActivity(project) {
+  const items = (project.activity || []).slice(0, 8);
+  return `
+    <section class="detail-block activity-panel">
+      <h3>Histórico</h3>
+      ${
+        items.length
+          ? `<div class="activity-list">${items
+              .map(
+                (item) => `
+                <article>
+                  <strong>${escapeHtml(item.label)}</strong>
+                  <span class="meta">${escapeHtml(item.actor || "Sistema")} · ${formatDateTime(item.at)}</span>
+                </article>`,
+              )
+              .join("")}</div>`
+          : `<div class="empty-state">As próximas ações deste projeto aparecerão aqui.</div>`
+      }
+    </section>
   `;
 }
 
@@ -1199,9 +1417,10 @@ function roleActionButtons(project) {
 }
 
 function renderRooms(project) {
+  const client = state.role === "cliente";
   return `
     <section class="detail-block">
-      <h3>Ambientes</h3>
+      <h3>${client ? "Evolução por ambiente" : "Ambientes"}</h3>
       <div class="room-list">
         ${project.rooms
           .map(
@@ -1210,18 +1429,22 @@ function renderRooms(project) {
               <div class="room-header">
                 <div>
                   <strong>${escapeHtml(room.name)}</strong>
-                  <span class="meta">${Number(room.measurementPhotos) || 0} fotos de medição</span>
+                  <span class="meta">${client ? (room.installDone ? "Montagem concluída" : room.designDone ? "Projeto concluído" : "Em andamento") : `${Number(room.measurementPhotos) || 0} fotos de medição`}</span>
                 </div>
-                <span class="tag">${escapeHtml(drivePath(project, `Medicao / ${room.name}`))}</span>
+                ${client ? `<span class="tag">${room.installDone ? "Concluído" : "Em andamento"}</span>` : `<span class="tag">${escapeHtml(drivePath(project, `Medicao / ${room.name}`))}</span>`}
               </div>
-              <div class="checks">
-                <label><input data-check="designDone" data-room="${escapeAttr(room.name)}" type="checkbox" ${room.designDone ? "checked" : ""} ${canEditRoomField("designDone") ? "" : "disabled"}> Projeto concluído</label>
-                <label><input data-check="installDone" data-room="${escapeAttr(room.name)}" type="checkbox" ${room.installDone ? "checked" : ""} ${canEditRoomField("installDone") ? "" : "disabled"}> Montagem concluída</label>
-                <label>
-                  Nota assistência
-                  <input data-support-note data-room="${escapeAttr(room.name)}" value="${escapeAttr(room.supportNote)}" placeholder="Sem pendência" ${canEditRoomField("supportNote") ? "" : "disabled"} />
-                </label>
-              </div>
+              ${
+                client
+                  ? ""
+                  : `<div class="checks">
+                      <label><input data-check="designDone" data-room="${escapeAttr(room.name)}" type="checkbox" ${room.designDone ? "checked" : ""} ${canEditRoomField("designDone") ? "" : "disabled"}> Projeto concluído</label>
+                      <label><input data-check="installDone" data-room="${escapeAttr(room.name)}" type="checkbox" ${room.installDone ? "checked" : ""} ${canEditRoomField("installDone") ? "" : "disabled"}> Montagem concluída</label>
+                      <label>
+                        Nota assistência
+                        <input data-support-note data-room="${escapeAttr(room.name)}" value="${escapeAttr(room.supportNote)}" placeholder="Sem pendência" ${canEditRoomField("supportNote") ? "" : "disabled"} />
+                      </label>
+                    </div>`
+              }
             </article>
           `,
           )
@@ -1271,10 +1494,15 @@ function renderAlerts(project) {
             <article class="alert-item alert-${escapeAttr(alert.level)}">
               <div>
                 <strong>${escapeHtml(alert.title)}</strong>
-                <span class="meta">Criado por ${escapeHtml(alert.source)}</span>
+                <span class="meta">
+                  Criado por ${escapeHtml(alert.source)}
+                  ${alert.assigneeId ? ` · Resp. ${escapeHtml(personName(alert.assigneeId))}` : ""}
+                  ${alert.dueDate ? ` · Prazo ${formatDate(alert.dueDate)}` : ""}
+                </span>
               </div>
               <div class="alert-actions">
                 <span class="alert-pill ${escapeAttr(alert.level)}">${escapeHtml(alertLabels[alert.level] || alert.level)}</span>
+                <span class="tag">${alert.status === "done" ? "Resolvido" : "Aberto"}</span>
                 ${canEditAlerts && alert.id ? `<button class="secondary-action compact-action" data-edit-alert="${escapeAttr(alert.id)}" type="button">Editar</button>` : ""}
                 ${canEditAlerts && alert.id ? `<button class="danger-action compact-action" data-delete-alert="${escapeAttr(alert.id)}" type="button">Excluir</button>` : ""}
               </div>
@@ -1342,6 +1570,12 @@ async function handleAction(action, projectId, extra = "") {
   if (isRealBackend()) {
     try {
       await handleBackendAction(action, project, extra);
+      const label = actionActivityLabel(action, extra);
+      if (label) {
+        if (action === "setSchedule") project.scheduleType = extra === "montagem" ? "montagem" : "medicao";
+        addActivity(project, label);
+        await persistProjectNotes(project);
+      }
       await loadBackendData();
     } catch (error) {
       showToast(friendlyError(error, "Não foi possível atualizar o projeto."));
@@ -1362,7 +1596,7 @@ async function handleAction(action, projectId, extra = "") {
   }
 
   if (action === "addCriticalAlert") {
-    project.alerts.unshift({ level: "critical", title: "Revisar informação crítica antes da execução", source: "ADM" });
+    project.alerts.unshift({ id: `a-${Date.now()}`, level: "critical", title: "Revisar informação crítica antes da execução", status: "open", source: "ADM", resolved: false });
     showToast("Alerta vermelho criado para a equipa de montagem.");
   }
 
@@ -1420,12 +1654,31 @@ async function handleAction(action, projectId, extra = "") {
   if (action === "reportIssue") {
     const firstOpenRoom = project.rooms.find((room) => !room.installDone) ?? project.rooms[0];
     firstOpenRoom.supportNote = "Pendência reportada na montagem. ADM deve fabricar reposição.";
-    project.alerts.unshift({ level: "critical", title: `Assistência aberta em ${firstOpenRoom.name}`, source: "Montador" });
+    project.alerts.unshift({ id: `a-${Date.now()}`, level: "critical", title: `Assistência aberta em ${firstOpenRoom.name}`, status: "open", source: "Montador", resolved: false });
     showToast("Pendência enviada ao ADM com alerta vermelho imediato.");
   }
 
+  const label = actionActivityLabel(action, extra);
+  if (label) addActivity(project, label);
   persistPilotData();
   renderProjects();
+}
+
+function actionActivityLabel(action, extra = "") {
+  const labels = {
+    approveAll: "Compras aprovadas pelo ADM",
+    setSchedule: `Agenda ativa alterada para ${extra === "medicao" ? "medição" : "montagem"}`,
+    addCriticalAlert: "Alerta crítico criado",
+    takePhotos: "Fotos de medição registradas",
+    finishMeasurement: "Medição finalizada",
+    startDesign: "Desenvolvimento iniciado",
+    requestPurchase: "Material solicitado para aprovação",
+    uploadFiles: "Arquivos técnicos anexados",
+    markPurchased: "Itens marcados como comprados",
+    attachInvoice: "Fatura anexada",
+    reportIssue: "Pendência de montagem relatada",
+  };
+  return labels[action] || "";
 }
 
 async function handleBackendAction(action, project, extra = "") {
@@ -1445,7 +1698,7 @@ async function handleBackendAction(action, project, extra = "") {
       scheduleType,
       measurementDate: project.measurementDate,
       installDate: project.installDate,
-    });
+    }, project.notesData || {});
     const { error } = await supabaseClient.from("projects").update({ notes }).eq("id", project.id);
     if (error) throw error;
     showToast(`Agenda ativa alterada para data da ${scheduleType === "medicao" ? "medição" : "montagem"}.`);
@@ -1457,6 +1710,7 @@ async function handleBackendAction(action, project, extra = "") {
       project_id: project.id,
       level: "critical",
       title: "Revisar informação crítica antes da execução",
+      description: alertDescription({ status: "open" }),
       created_by: state.profile.id,
     });
     if (error) throw error;
@@ -1493,6 +1747,7 @@ async function handleBackendAction(action, project, extra = "") {
       project_id: project.id,
       level: "info",
       title: "Projetista iniciou o desenvolvimento",
+      description: alertDescription({ status: "open" }),
       created_by: state.profile.id,
     });
     showToast("Start registado. O ADM foi notificado.");
@@ -1566,6 +1821,7 @@ async function handleBackendAction(action, project, extra = "") {
       room_id: room.id,
       level: "critical",
       title: `Assistência aberta em ${room.name}`,
+      description: alertDescription({ status: "open" }),
       created_by: state.profile.id,
     });
     if (alertError) throw alertError;
@@ -1578,12 +1834,21 @@ async function saveAlertFromForm(formData) {
   const alertId = String(formData.get("alertId") || "");
   const title = String(formData.get("title") || "").trim();
   const level = ["critical", "attention", "info"].includes(formData.get("level")) ? formData.get("level") : "critical";
+  const assigneeId = String(formData.get("assignee") || "");
+  const dueDate = String(formData.get("dueDate") || "");
+  const status = formData.get("status") === "done" ? "done" : "open";
   const project = getProject(projectId);
   if (!project) throw new Error("Projeto não encontrado para o alerta.");
   if (!title) throw new Error("Informe a mensagem do alerta.");
 
   if (isRealBackend()) {
-    const payload = { level, title };
+    const payload = {
+      level,
+      title,
+      description: alertDescription({ assigneeId, dueDate, status }),
+      resolved: status === "done",
+      resolved_at: status === "done" ? new Date().toISOString() : null,
+    };
     const result = alertId
       ? await supabaseClient.from("alerts").update(payload).eq("id", alertId)
       : await supabaseClient.from("alerts").insert({
@@ -1591,18 +1856,25 @@ async function saveAlertFromForm(formData) {
           project_id: projectId,
           level,
           title,
+          description: alertDescription({ assigneeId, dueDate, status }),
+          resolved: status === "done",
+          resolved_at: status === "done" ? new Date().toISOString() : null,
           created_by: state.profile.id,
         });
     if (result.error) throw result.error;
+    addActivity(project, alertId ? `Alerta atualizado: ${title}` : `Alerta criado: ${title}`);
+    await persistProjectNotes(project);
     await loadBackendData();
     return;
   }
 
   if (alertId) {
     const alert = project.alerts.find((item) => item.id === alertId);
-    if (alert) Object.assign(alert, { level, title, source: activePerson()?.name || "ADM" });
+    if (alert) Object.assign(alert, { level, title, assigneeId, dueDate, status, resolved: status === "done", source: activePerson()?.name || "ADM" });
+    addActivity(project, `Alerta atualizado: ${title}`);
   } else {
-    project.alerts.unshift({ id: `a-${Date.now()}`, level, title, source: activePerson()?.name || "ADM", resolved: false });
+    project.alerts.unshift({ id: `a-${Date.now()}`, level, title, assigneeId, dueDate, status, source: activePerson()?.name || "ADM", resolved: status === "done" });
+    addActivity(project, `Alerta criado: ${title}`);
   }
   persistPilotData();
 }
@@ -1625,6 +1897,8 @@ async function deleteAlert(projectId, alertId) {
         .update({ resolved: true, resolved_at: new Date().toISOString() })
         .eq("id", alertId);
       if (error) throw error;
+      addActivity(project, `Alerta excluído: ${alert.title}`);
+      await persistProjectNotes(project);
       await loadBackendData();
       renderProjects();
       showToast("Alerta excluído da interface do projeto.");
@@ -1635,6 +1909,7 @@ async function deleteAlert(projectId, alertId) {
   }
 
   project.alerts = project.alerts.filter((item) => item.id !== alertId);
+  addActivity(project, `Alerta excluído: ${alert.title}`);
   persistPilotData();
   renderProjects();
   showToast("Alerta excluído do projeto.");
@@ -1644,6 +1919,7 @@ async function updateRoomCheck(projectId, roomName, key, checked) {
   const room = findRoom(projectId, roomName);
   if (!room) return;
   if (isRealBackend()) {
+    const project = getProject(projectId);
     const column = key === "designDone" ? "design_done" : "install_done";
     const { error } = await supabaseClient.from("rooms").update({ [column]: checked }).eq("id", room.id);
     if (error) {
@@ -1651,11 +1927,17 @@ async function updateRoomCheck(projectId, roomName, key, checked) {
       return;
     }
     room[key] = checked;
+    if (project) {
+      addActivity(project, `${key === "designDone" ? "Checklist de projeto" : "Checklist de montagem"} atualizado em ${roomName}`);
+      await persistProjectNotes(project);
+    }
     showToast(key === "designDone" ? "Checklist do projetista atualizado." : "Checklist de montagem atualizado.");
     await loadBackendData();
     return;
   }
   room[key] = checked;
+  const project = getProject(projectId);
+  if (project) addActivity(project, `${key === "designDone" ? "Checklist de projeto" : "Checklist de montagem"} atualizado em ${roomName}`);
   persistPilotData();
   showToast(key === "designDone" ? "Checklist do projetista atualizado." : "Checklist de montagem atualizado.");
 }
@@ -1681,8 +1963,11 @@ async function updateSupportNote(projectId, roomName, value) {
         room_id: room.id,
         level: "critical",
         title: `Assistência aberta em ${roomName}`,
+        description: alertDescription({ status: "open" }),
         created_by: state.profile.id,
       });
+      addActivity(project, `Assistência aberta em ${roomName}`);
+      await persistProjectNotes(project);
       showToast("Nota registrada e alerta vermelho enviado ao ADM.");
     }
     await loadBackendData();
@@ -1691,7 +1976,8 @@ async function updateSupportNote(projectId, roomName, value) {
   room.supportNote = value;
   if (value.trim()) {
     const project = state.projects.find((item) => item.id === projectId);
-    project.alerts.unshift({ level: "critical", title: `Assistência aberta em ${roomName}`, source: "Montador" });
+    project.alerts.unshift({ id: `a-${Date.now()}`, level: "critical", title: `Assistência aberta em ${roomName}`, status: "open", source: "Montador", resolved: false });
+    addActivity(project, `Assistência aberta em ${roomName}`);
     showToast("Nota registrada e alerta vermelho enviado ao ADM.");
   }
   persistPilotData();
@@ -1709,6 +1995,11 @@ function drivePath(project, suffix) {
 function formatDate(value) {
   if (!value) return "Sem data";
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(`${value}T12:00:00`));
+}
+
+function formatDateTime(value) {
+  if (!value) return "Sem data";
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }
 
 function setView(view) {
@@ -1937,6 +2228,7 @@ projectForm.addEventListener("submit", async (event) => {
     project.rooms.forEach((room, index) => {
       room.name = rooms[index] || room.name;
     });
+    addActivity(project, "Projeto atualizado");
     projectForm.reset();
     dialog.close();
     persistPilotData();
@@ -1964,6 +2256,8 @@ projectForm.addEventListener("submit", async (event) => {
     purchases: [],
     alerts: [{ id: `a-${Date.now()}`, level: "info", title: "Projeto criado pelo ADM", source: "ADM", resolved: false }],
     files: { medicao: [], engenharia: [], obra: [] },
+    activity: [{ id: `log-${Date.now()}`, at: new Date().toISOString(), actor: actorName(), label: "Projeto criado" }],
+    notesData: {},
   };
   state.projects.unshift(project);
   state.selectedProjectId = project.id;
