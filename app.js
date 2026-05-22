@@ -438,6 +438,7 @@ async function loadBackendData() {
   state.projects = (projects || []).map((project) =>
     mapProject(project, roomsResult.data || [], purchasesResult.data || [], alertsResult.data || [], filesResult.data || []),
   );
+  await hydrateSignedFileUrls();
   state.selectedProjectId = state.projects[0]?.id || "";
   renderPersonSelect();
   setView(state.view);
@@ -461,7 +462,14 @@ function mapProject(project, rooms, purchases, alerts, files) {
     .filter((file) => file.project_id === project.id)
     .forEach((file) => {
       if (!projectFiles[file.category]) projectFiles[file.category] = [];
-      projectFiles[file.category].push(file.file_name);
+      projectFiles[file.category].push({
+        id: file.id,
+        name: file.file_name,
+        path: file.storage_path,
+        bucket: file.storage_bucket || "project-files",
+        roomId: file.room_id || "",
+        url: "",
+      });
     });
 
   return {
@@ -487,6 +495,7 @@ function mapProject(project, rooms, purchases, alerts, files) {
         id: room.id,
         name: room.name,
         measurementPhotos: room.measurement_photos_count || 0,
+        measurements: parseMeasurementNotes(room.measurement_notes),
         designDone: room.design_done,
         installDone: room.install_done,
         supportNote: room.support_note || "",
@@ -516,6 +525,17 @@ function mapProject(project, rooms, purchases, alerts, files) {
   };
 }
 
+async function hydrateSignedFileUrls() {
+  if (!supabaseClient) return;
+  const files = state.projects.flatMap((project) => Object.values(project.files || {}).flat()).filter((file) => file?.path);
+  await Promise.all(
+    files.map(async (file) => {
+      const { data } = await supabaseClient.storage.from(file.bucket || "project-files").createSignedUrl(file.path, 60 * 60);
+      file.url = data?.signedUrl || "";
+    }),
+  );
+}
+
 function nullIfEmpty(value) {
   return value ? value : null;
 }
@@ -528,6 +548,27 @@ function parseProjectNotes(notes) {
   } catch {
     return {};
   }
+}
+
+function parseMeasurementNotes(notes) {
+  const defaults = { width: "", height: "", depth: "", linear: "", notes: "" };
+  if (!notes) return defaults;
+  try {
+    const data = JSON.parse(notes);
+    return { ...defaults, ...(data && typeof data === "object" ? data : {}) };
+  } catch {
+    return { ...defaults, notes };
+  }
+}
+
+function measurementNotesPayload(measurements) {
+  return JSON.stringify({
+    width: measurements.width || "",
+    height: measurements.height || "",
+    depth: measurements.depth || "",
+    linear: measurements.linear || "",
+    notes: measurements.notes || "",
+  });
 }
 
 function projectSchedule(project) {
@@ -1273,6 +1314,26 @@ function renderProjects() {
     const projectId = input.closest("[data-project-id]")?.dataset.projectId;
     if (projectId) input.addEventListener("change", () => updateSupportNote(projectId, input.dataset.room, input.value));
   });
+
+  projectList.querySelectorAll("[data-measure]").forEach((input) => {
+    const projectId = input.closest("[data-project-id]")?.dataset.projectId;
+    if (projectId) input.addEventListener("change", () => updateRoomMeasurement(projectId, input.dataset.room, input.dataset.measure, input.value));
+  });
+
+  projectList.querySelectorAll("[data-room-photo-input]").forEach((input) => {
+    const projectId = input.closest("[data-project-id]")?.dataset.projectId;
+    if (projectId) input.addEventListener("change", () => uploadRoomPhotos(projectId, input.dataset.room, input.files));
+  });
+
+  projectList.querySelectorAll("[data-edit-photo]").forEach((button) => {
+    const projectId = button.closest("[data-project-id]")?.dataset.projectId;
+    if (projectId) button.addEventListener("click", () => renamePhoto(projectId, button.dataset.editPhoto));
+  });
+
+  projectList.querySelectorAll("[data-delete-photo]").forEach((button) => {
+    const projectId = button.closest("[data-project-id]")?.dataset.projectId;
+    if (projectId) button.addEventListener("click", () => deletePhoto(projectId, button.dataset.deletePhoto));
+  });
 }
 
 function renderExpandedProject(project) {
@@ -1418,6 +1479,7 @@ function roleActionButtons(project) {
 
 function renderRooms(project) {
   const client = state.role === "cliente";
+  const canMeasure = ["adm", "medidor"].includes(state.role);
   return `
     <section class="detail-block">
       <h3>${client ? "Evolução por ambiente" : "Ambientes"}</h3>
@@ -1436,7 +1498,8 @@ function renderRooms(project) {
               ${
                 client
                   ? ""
-                  : `<div class="checks">
+                  : `${renderMeasurementPanel(project, room, canMeasure)}
+                    <div class="checks">
                       <label><input data-check="designDone" data-room="${escapeAttr(room.name)}" type="checkbox" ${room.designDone ? "checked" : ""} ${canEditRoomField("designDone") ? "" : "disabled"}> Projeto concluído</label>
                       <label><input data-check="installDone" data-room="${escapeAttr(room.name)}" type="checkbox" ${room.installDone ? "checked" : ""} ${canEditRoomField("installDone") ? "" : "disabled"}> Montagem concluída</label>
                       <label>
@@ -1451,6 +1514,57 @@ function renderRooms(project) {
           .join("")}
       </div>
     </section>
+  `;
+}
+
+function renderMeasurementPanel(project, room, canMeasure) {
+  const measurements = room.measurements || {};
+  const photos = (project.files.medicao || []).filter((file) => file.roomId === room.id || file.roomName === room.name);
+  return `
+    <div class="measurement-panel">
+      <div class="measurement-grid">
+        <label>Comprimento / largura<input data-measure="width" data-room="${escapeAttr(room.name)}" value="${escapeAttr(measurements.width || "")}" placeholder="Ex: 2,40 m" ${canMeasure ? "" : "disabled"} /></label>
+        <label>Altura<input data-measure="height" data-room="${escapeAttr(room.name)}" value="${escapeAttr(measurements.height || "")}" placeholder="Ex: 2,70 m" ${canMeasure ? "" : "disabled"} /></label>
+        <label>Profundidade<input data-measure="depth" data-room="${escapeAttr(room.name)}" value="${escapeAttr(measurements.depth || "")}" placeholder="Ex: 0,60 m" ${canMeasure ? "" : "disabled"} /></label>
+        <label>Metragem linear<input data-measure="linear" data-room="${escapeAttr(room.name)}" value="${escapeAttr(measurements.linear || "")}" placeholder="Ex: 5,80 m" ${canMeasure ? "" : "disabled"} /></label>
+      </div>
+      <label class="measurement-notes">Observações de medição<input data-measure="notes" data-room="${escapeAttr(room.name)}" value="${escapeAttr(measurements.notes || "")}" placeholder="Paredes fora de esquadro, pontos elétricos, recortes..." ${canMeasure ? "" : "disabled"} /></label>
+      <div class="photo-toolbar">
+        <strong>Fotos da medição</strong>
+        ${
+          canMeasure
+            ? `<label class="secondary-action compact-action photo-capture">Abrir câmera<input data-room-photo-input data-room="${escapeAttr(room.name)}" type="file" accept="image/*" capture="environment" multiple /></label>`
+            : ""
+        }
+      </div>
+      <div class="photo-grid">
+        ${
+          photos.length
+            ? photos.map((photo) => renderPhotoThumb(photo, canMeasure)).join("")
+            : `<span class="empty-state inline-empty">Nenhuma foto registrada neste ambiente.</span>`
+        }
+      </div>
+    </div>
+  `;
+}
+
+function renderPhotoThumb(photo, canManage) {
+  const src = photo.url || photo.preview || "";
+  return `
+    <article class="photo-thumb">
+      ${src ? `<a href="${escapeAttr(src)}" target="_blank" rel="noreferrer"><img src="${escapeAttr(src)}" alt="${escapeAttr(photo.name)}" loading="lazy" /></a>` : `<div class="photo-placeholder">Imagem</div>`}
+      <div>
+        <strong>${escapeHtml(photo.name)}</strong>
+        ${
+          canManage
+            ? `<span class="photo-actions">
+                <button class="secondary-action compact-action" data-edit-photo="${escapeAttr(photo.id)}" type="button">Editar</button>
+                <button class="danger-action compact-action" data-delete-photo="${escapeAttr(photo.id)}" type="button">Excluir</button>
+              </span>`
+            : ""
+        }
+      </div>
+    </article>
   `;
 }
 
@@ -1539,7 +1653,7 @@ function renderDrive(project) {
                 <div class="file-row">
                   ${
                     (project.files[key] || []).length
-                      ? project.files[key].map((file) => `<span class="file-chip">${escapeHtml(file)}</span>`).join("")
+                      ? project.files[key].map((file) => `<span class="file-chip">${escapeHtml(file.name || file)}</span>`).join("")
                       : `<span class="file-chip">Pasta criada automaticamente</span>`
                   }
                 </div>
@@ -1604,7 +1718,7 @@ async function handleAction(action, projectId, extra = "") {
     project.rooms.forEach((room) => {
       room.measurementPhotos += 1;
     });
-    showToast("Fotos adicionadas e enviadas para as pastas de medição por ambiente.");
+    showToast("Abra o ambiente desejado e use Abrir câmera para anexar fotos reais.");
   }
 
   if (action === "finishMeasurement") {
@@ -1986,6 +2100,158 @@ async function updateSupportNote(projectId, roomName, value) {
 
 function findRoom(projectId, roomName) {
   return state.projects.find((item) => item.id === projectId)?.rooms.find((room) => room.name === roomName);
+}
+
+function findPhoto(project, photoId) {
+  return Object.values(project.files || {})
+    .flat()
+    .find((file) => file?.id === photoId);
+}
+
+async function updateRoomMeasurement(projectId, roomName, key, value) {
+  const project = getProject(projectId);
+  const room = findRoom(projectId, roomName);
+  if (!project || !room) return;
+  room.measurements = { ...(room.measurements || {}), [key]: value.trim() };
+  if (isRealBackend()) {
+    const { error } = await supabaseClient.from("rooms").update({ measurement_notes: measurementNotesPayload(room.measurements) }).eq("id", room.id);
+    if (error) {
+      showToast(friendlyError(error, "Não foi possível salvar a metragem."));
+      return;
+    }
+    addActivity(project, `Metragem atualizada em ${roomName}`);
+    await persistProjectNotes(project);
+    await loadBackendData();
+  } else {
+    addActivity(project, `Metragem atualizada em ${roomName}`);
+    persistPilotData();
+  }
+  showToast("Metragem salva no ambiente.");
+}
+
+async function uploadRoomPhotos(projectId, roomName, fileList) {
+  const project = getProject(projectId);
+  const room = findRoom(projectId, roomName);
+  const files = Array.from(fileList || []).filter((file) => file.type.startsWith("image/"));
+  if (!project || !room || !files.length) return;
+
+  if (isRealBackend()) {
+    try {
+      for (const file of files) {
+        const safeName = `${Date.now()}-${file.name}`.replace(/[^\w.\-]+/g, "-");
+        const storagePath = `${state.companyId}/${project.id}/medicao/${room.id}/${safeName}`;
+        const upload = await supabaseClient.storage.from("project-files").upload(storagePath, file, { contentType: file.type, upsert: false });
+        if (upload.error) throw upload.error;
+        const { error } = await supabaseClient.from("project_files").insert({
+          company_id: state.companyId,
+          project_id: project.id,
+          room_id: room.id,
+          category: "medicao",
+          file_name: file.name,
+          storage_path: storagePath,
+          uploaded_by: state.profile.id,
+        });
+        if (error) throw error;
+      }
+      const { error: roomError } = await supabaseClient
+        .from("rooms")
+        .update({ measurement_photos_count: room.measurementPhotos + files.length })
+        .eq("id", room.id);
+      if (roomError) throw roomError;
+      addActivity(project, `${files.length} foto(s) adicionada(s) em ${roomName}`);
+      await persistProjectNotes(project);
+      await loadBackendData();
+      showToast("Fotos enviadas para a pasta de medição.");
+    } catch (error) {
+      showToast(friendlyError(error, "Não foi possível enviar as fotos. Confirme se o Storage project-files está configurado."));
+    }
+    return;
+  }
+
+  const loaded = await Promise.all(files.map(readFileAsDataUrl));
+  project.files.medicao = project.files.medicao || [];
+  loaded.forEach(({ file, url }) => {
+    project.files.medicao.unshift({ id: `photo-${Date.now()}-${Math.random().toString(16).slice(2)}`, name: file.name, roomName, preview: url, url });
+  });
+  room.measurementPhotos += loaded.length;
+  addActivity(project, `${loaded.length} foto(s) adicionada(s) em ${roomName}`);
+  persistPilotData();
+  renderProjects();
+  showToast("Fotos adicionadas ao ambiente.");
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve({ file, url: reader.result });
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function renamePhoto(projectId, photoId) {
+  const project = getProject(projectId);
+  const photo = project ? findPhoto(project, photoId) : null;
+  if (!project || !photo) return;
+  const nextName = window.prompt("Nome/legenda da foto", photo.name);
+  if (!nextName || nextName.trim() === photo.name) return;
+  const fileName = nextName.trim().slice(0, 120);
+
+  if (isRealBackend()) {
+    const ok = await manageProjectFile({ method: "PATCH", fileId: photo.id, fileName });
+    if (!ok) return;
+    addActivity(project, `Foto renomeada: ${fileName}`);
+    await persistProjectNotes(project);
+    await loadBackendData();
+  } else {
+    photo.name = fileName;
+    addActivity(project, `Foto renomeada: ${fileName}`);
+    persistPilotData();
+    renderProjects();
+  }
+  showToast("Foto atualizada.");
+}
+
+async function deletePhoto(projectId, photoId) {
+  const project = getProject(projectId);
+  const photo = project ? findPhoto(project, photoId) : null;
+  if (!project || !photo) return;
+  if (!window.confirm(`Excluir a foto "${photo.name}"?`)) return;
+
+  if (isRealBackend()) {
+    const ok = await manageProjectFile({ method: "DELETE", fileId: photo.id });
+    if (!ok) return;
+    addActivity(project, `Foto excluída: ${photo.name}`);
+    await persistProjectNotes(project);
+    await loadBackendData();
+  } else {
+    Object.keys(project.files || {}).forEach((category) => {
+      project.files[category] = (project.files[category] || []).filter((file) => file.id !== photoId);
+    });
+    addActivity(project, `Foto excluída: ${photo.name}`);
+    persistPilotData();
+    renderProjects();
+  }
+  showToast("Foto excluída.");
+}
+
+async function manageProjectFile({ method, fileId, fileName = "" }) {
+  try {
+    const response = await fetch("/api/manage-file", {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${state.session?.access_token || ""}`,
+      },
+      body: JSON.stringify({ fileId, fileName }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Falha ao gerir arquivo.");
+    return true;
+  } catch (error) {
+    showToast(friendlyError(error, "Não foi possível gerir a foto."));
+    return false;
+  }
 }
 
 function drivePath(project, suffix) {

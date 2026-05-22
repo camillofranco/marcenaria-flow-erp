@@ -893,6 +893,110 @@ h2 {
   margin-top: 10px;
 }
 
+.measurement-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.measurement-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.measurement-grid label,
+.measurement-notes {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.measurement-grid input,
+.measurement-notes input {
+  min-height: 38px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.photo-toolbar,
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.photo-toolbar {
+  justify-content: space-between;
+}
+
+.photo-capture {
+  position: relative;
+  overflow: hidden;
+}
+
+.photo-capture input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.photo-thumb {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.photo-thumb img,
+.photo-placeholder {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+  background: #f0ece3;
+}
+
+.photo-placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.photo-thumb > div {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+}
+
+.photo-thumb strong {
+  overflow-wrap: anywhere;
+  font-size: 0.84rem;
+}
+
+.inline-empty {
+  width: 100%;
+}
+
 .checks label {
   display: flex;
   align-items: center;
@@ -1316,7 +1420,8 @@ h2 {
 
   .priority-list,
   .timeline,
-  .client-summary {
+  .client-summary,
+  .measurement-grid {
     grid-template-columns: 1fr;
   }
 
