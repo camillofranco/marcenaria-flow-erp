@@ -11,7 +11,7 @@
     <link rel="icon" href="./assets/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="./assets/favicon.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./styles.css?v=20260520-9" />
+    <link rel="stylesheet" href="./styles.css?v=20260522-1" />
   </head>
   <body>
     <section class="auth-gate" id="authGate">
@@ -162,8 +162,19 @@
             <input name="address" required placeholder="Rua, número, bairro, cidade" />
           </label>
           <label>
+            Agenda ativa
+            <select name="scheduleType">
+              <option value="medicao">Data da medição</option>
+              <option value="montagem">Data da montagem</option>
+            </select>
+          </label>
+          <label>
+            Data da medição
+            <input name="measurementDate" type="date" />
+          </label>
+          <label>
             Data da montagem
-            <input name="installDate" required type="date" />
+            <input name="installDate" type="date" />
           </label>
           <label>
             Medidor
@@ -286,6 +297,6 @@
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./app.js?v=20260520-9"></script>
+    <script src="./app.js?v=20260522-1"></script>
   </body>
 </html>

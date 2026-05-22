@@ -118,6 +118,11 @@ const alertLabels = {
   info: "Informativo",
 };
 
+const scheduleLabels = {
+  medicao: "Medição",
+  montagem: "Montagem",
+};
+
 let tourIndex = 0;
 
 const tourSteps = {
@@ -402,6 +407,7 @@ function mapProfile(profile) {
 
 function mapProject(project, rooms, purchases, alerts, files) {
   const projectFiles = { medicao: [], engenharia: [], obra: [], compras: [], assistencia: [] };
+  const notes = parseProjectNotes(project.notes);
   files
     .filter((file) => file.project_id === project.id)
     .forEach((file) => {
@@ -415,6 +421,8 @@ function mapProject(project, rooms, purchases, alerts, files) {
     client: project.client_name,
     address: project.address,
     installDate: project.install_date,
+    measurementDate: notes.measurementDate || "",
+    scheduleType: notes.scheduleType === "medicao" ? "medicao" : "montagem",
     status: project.status,
     medidorId: project.medidor_id,
     projetistaId: project.projetista_id,
@@ -459,7 +467,43 @@ function nullIfEmpty(value) {
   return value ? value : null;
 }
 
+function parseProjectNotes(notes) {
+  if (!notes) return {};
+  try {
+    const data = JSON.parse(notes);
+    return data && typeof data === "object" ? data : {};
+  } catch {
+    return {};
+  }
+}
+
+function projectSchedule(project) {
+  const type = project.scheduleType === "medicao" ? "medicao" : "montagem";
+  const date = type === "medicao" ? project.measurementDate || project.installDate : project.installDate || project.measurementDate;
+  return { type, date };
+}
+
+function scheduleNotes({ scheduleType, measurementDate, installDate }) {
+  return JSON.stringify({
+    scheduleType: scheduleType === "medicao" ? "medicao" : "montagem",
+    measurementDate: measurementDate || "",
+    installDate: installDate || "",
+  });
+}
+
+function validateSchedule(formData) {
+  const scheduleType = formData.get("scheduleType") === "montagem" ? "montagem" : "medicao";
+  const measurementDate = String(formData.get("measurementDate") || "");
+  const installDate = String(formData.get("installDate") || "");
+  const activeDate = scheduleType === "medicao" ? measurementDate : installDate;
+  if (!activeDate) {
+    throw new Error(scheduleType === "medicao" ? "Informe a data da medição." : "Informe a data da montagem.");
+  }
+  return { scheduleType, measurementDate, installDate, activeDate };
+}
+
 async function createProjectBackend(formData, rooms) {
+  const schedule = validateSchedule(formData);
   const { data: project, error } = await supabaseClient
     .from("projects")
     .insert({
@@ -467,13 +511,14 @@ async function createProjectBackend(formData, rooms) {
       project_number: String(formData.get("number")).trim(),
       client_name: String(formData.get("client")).trim(),
       address: String(formData.get("address")).trim(),
-      install_date: formData.get("installDate"),
+      install_date: schedule.installDate || schedule.measurementDate,
       status: "medicao",
       medidor_id: nullIfEmpty(formData.get("medidor")),
       projetista_id: nullIfEmpty(formData.get("projetista")),
       comprador_id: nullIfEmpty(formData.get("comprador")),
       montador_id: nullIfEmpty(formData.get("montador")),
       cliente_id: nullIfEmpty(formData.get("clienteUser")),
+      notes: scheduleNotes(schedule),
       created_by: state.profile.id,
     })
     .select()
@@ -912,13 +957,15 @@ function renderProjects() {
 
   projectList.innerHTML = projects
     .map(
-      (project) => `
+      (project) => {
+        const schedule = projectSchedule(project);
+        return `
       <article class="project-card ${project.id === state.selectedProjectId ? "active" : ""}" data-project-id="${escapeAttr(project.id)}">
         <div>
           <h3>${escapeHtml(project.number)} · ${escapeHtml(project.client)}</h3>
           <p class="meta">${escapeHtml(project.address)}</p>
           <div class="project-tags">
-            <span class="tag">Montagem ${formatDate(project.installDate)}</span>
+            <span class="tag">${scheduleLabels[schedule.type]} ${formatDate(schedule.date)}</span>
             <span class="tag">Medidor ${escapeHtml(personName(project.medidorId))}</span>
             <span class="tag">Projetista ${escapeHtml(personName(project.projetistaId))}</span>
             <span class="tag">Montador ${escapeHtml(personName(project.montadorId))}</span>
@@ -928,7 +975,8 @@ function renderProjects() {
           <span class="status-pill status-${escapeAttr(project.status)}">${escapeHtml(statusLabels[project.status] || project.status)}</span>
         </div>
       </article>
-    `,
+    `;
+      },
     )
     .join("");
 
@@ -945,12 +993,18 @@ function renderProjects() {
 function renderDetail() {
   const project = state.projects.find((item) => item.id === state.selectedProjectId);
   if (!project) return;
+  const schedule = projectSchedule(project);
 
   detailPanel.innerHTML = `
     <div>
       <p class="eyebrow">${escapeHtml(project.number)}</p>
       <h2>${escapeHtml(project.client)}</h2>
       <p class="meta">${escapeHtml(project.address)}</p>
+      <div class="project-tags">
+        <span class="tag">Agenda ativa: ${escapeHtml(scheduleLabels[schedule.type])}</span>
+        ${project.measurementDate ? `<span class="tag">Medição ${formatDate(project.measurementDate)}</span>` : ""}
+        ${project.installDate ? `<span class="tag">Montagem ${formatDate(project.installDate)}</span>` : ""}
+      </div>
       <div class="action-row">
         ${roleActionButtons(project)}
       </div>
@@ -980,6 +1034,8 @@ function roleActionButtons(project) {
     adm: `
       <button class="primary-action" data-action="approveAll" type="button">Aprovar compras</button>
       <button class="secondary-action" data-action="addCriticalAlert" type="button">Alerta crítico</button>
+      <button class="secondary-action" data-action="setSchedule" data-extra="medicao" type="button">Usar data medição</button>
+      <button class="secondary-action" data-action="setSchedule" data-extra="montagem" type="button">Usar data montagem</button>
     `,
     medidor: `
       <button class="primary-action" data-action="takePhotos" type="button">Abrir câmera</button>
@@ -1125,13 +1181,13 @@ function renderDrive(project) {
   `;
 }
 
-async function handleAction(action, projectId) {
+async function handleAction(action, projectId, extra = "") {
   const project = state.projects.find((item) => item.id === projectId);
   if (!project) return;
 
   if (isRealBackend()) {
     try {
-      await handleBackendAction(action, project);
+      await handleBackendAction(action, project, extra);
       await loadBackendData();
     } catch (error) {
       showToast(friendlyError(error, "Não foi possível atualizar o projeto."));
@@ -1144,6 +1200,11 @@ async function handleAction(action, projectId) {
       if (item.approval === "pendente") item.approval = "aprovado";
     });
     showToast("Compras pendentes aprovadas e liberadas para o comprador.");
+  }
+
+  if (action === "setSchedule") {
+    project.scheduleType = extra === "montagem" ? "montagem" : "medicao";
+    showToast(`Agenda ativa alterada para data da ${project.scheduleType === "medicao" ? "medição" : "montagem"}.`);
   }
 
   if (action === "addCriticalAlert") {
@@ -1213,7 +1274,7 @@ async function handleAction(action, projectId) {
   renderProjects();
 }
 
-async function handleBackendAction(action, project) {
+async function handleBackendAction(action, project, extra = "") {
   if (action === "approveAll") {
     const { error } = await supabaseClient
       .from("purchases")
@@ -1222,6 +1283,18 @@ async function handleBackendAction(action, project) {
       .eq("approval", "pendente");
     if (error) throw error;
     showToast("Compras pendentes aprovadas e liberadas para o comprador.");
+  }
+
+  if (action === "setSchedule") {
+    const scheduleType = extra === "montagem" ? "montagem" : "medicao";
+    const notes = scheduleNotes({
+      scheduleType,
+      measurementDate: project.measurementDate,
+      installDate: project.installDate,
+    });
+    const { error } = await supabaseClient.from("projects").update({ notes }).eq("id", project.id);
+    if (error) throw error;
+    showToast(`Agenda ativa alterada para data da ${scheduleType === "medicao" ? "medição" : "montagem"}.`);
   }
 
   if (action === "addCriticalAlert") {
@@ -1413,6 +1486,7 @@ function drivePath(project, suffix) {
 }
 
 function formatDate(value) {
+  if (!value) return "Sem data";
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(`${value}T12:00:00`));
 }
 
@@ -1598,6 +1672,13 @@ projectForm.addEventListener("submit", async (event) => {
   if (event.submitter?.value === "cancel") return;
   event.preventDefault();
   const formData = new FormData(projectForm);
+  let schedule;
+  try {
+    schedule = validateSchedule(formData);
+  } catch (error) {
+    showToast(error.message);
+    return;
+  }
   const rooms = String(formData.get("rooms") || "Ambiente 1")
     .split(",")
     .map((room) => room.trim())
@@ -1618,7 +1699,9 @@ projectForm.addEventListener("submit", async (event) => {
     number: formData.get("number"),
     client: formData.get("client"),
     address: formData.get("address"),
-    installDate: formData.get("installDate"),
+    installDate: schedule.installDate,
+    measurementDate: schedule.measurementDate,
+    scheduleType: schedule.scheduleType,
     status: "medicao",
     medidorId: formData.get("medidor"),
     projetistaId: formData.get("projetista"),
