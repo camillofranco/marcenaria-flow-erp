@@ -67,6 +67,7 @@ const pageTitle = document.querySelector("#pageTitle");
 const mainPanelTitle = document.querySelector("#mainPanelTitle");
 const mainPanelSubtitle = document.querySelector("#mainPanelSubtitle");
 const metrics = document.querySelector("#metrics");
+const contentGrid = document.querySelector(".content-grid");
 const projectList = document.querySelector("#projectList");
 const detailPanel = document.querySelector("#detailPanel");
 const searchInput = document.querySelector("#searchInput");
@@ -135,42 +136,42 @@ const tourSteps = {
   adm: [
     { selector: "#newProjectBtn", title: "Abrir projeto", text: "Crie o card do cliente com número, endereço, agenda ativa, data de medição, data de montagem, ambientes e responsáveis.", side: "right" },
     { selector: "#projectList", title: "Editar projeto", text: "Clique em um card e use Editar projeto no painel lateral para alterar datas, status, responsáveis, cliente vinculado e ambientes.", side: "right" },
-    { selector: "#detailPanel", title: "Agenda do card", text: "A agenda ativa define qual data aparece no card. O ADM pode alternar entre medição e montagem a qualquer momento.", side: "left" },
-    { selector: "#detailPanel", title: "Alertas visuais", text: "Use Novo alerta para registrar riscos críticos, atenção ou informação. Quando houver alerta crítico aberto, o card fica vermelho automaticamente.", side: "left" },
+    { selector: "#projectList", title: "Agenda do card", text: "A agenda ativa define qual data aparece no card. O ADM pode alternar entre medição e montagem a qualquer momento.", side: "right" },
+    { selector: "#projectList", title: "Alertas visuais", text: "Use Novo alerta para registrar riscos críticos, atenção ou informação. Quando houver alerta crítico aberto, o card fica vermelho automaticamente.", side: "right" },
     { selector: "#newPersonBtn", title: "Gerir acessos", text: "Cadastre, altere ou exclua usuários reais. O ADM controla perfis de medidor, projetista, comprador, montador, cliente e outros ADMs.", side: "right" },
     { selector: "#roleSelect", title: "Visão por perfil", text: "No acesso real, o usuário comum fica travado no próprio perfil. O programador admin pode alternar a visão para validar a operação.", side: "right" },
     { selector: "[data-view='purchases']", title: "Compras e aprovação", text: "Acompanhe materiais solicitados pelo projetista, aprove compras e libere apenas o que o comprador deve executar.", side: "right" },
     { selector: "[data-view='alerts']", title: "Central de alertas", text: "Nesta visão ficam reunidas as ocorrências críticas, atenção e informações de obra para o ADM priorizar antes da equipe avançar.", side: "right" },
-    { selector: "#searchInput", title: "Busca operacional", text: "Filtre rapidamente por número do projeto, cliente ou endereço, sempre respeitando a permissão do usuário logado.", side: "left" },
+    { selector: "#searchInput", title: "Busca operacional", text: "Filtre rapidamente por número do projeto, cliente ou endereço, sempre respeitando a permissão do usuário logado.", side: "right" },
   ],
   medidor: [
     { selector: "[data-view='projects']", title: "Projetos atribuídos", text: "O medidor enxerga apenas obras onde foi vinculado pelo ADM. Sem vínculo, a tela fica vazia.", side: "right" },
     { selector: "#projectList", title: "Medição técnica", text: "Abra o card na obra, confira cliente, endereço, agenda ativa e ambientes contratados antes de iniciar a medição.", side: "right" },
-    { selector: "#detailPanel", title: "Fotos e liberação", text: "Use Abrir câmera para registrar fotos por ambiente e Liberar projeto quando a medição estiver pronta para o projetista.", side: "left" },
-    { selector: "#detailPanel", title: "Alertas no detalhe", text: "Leia alertas antes de medir. Alertas críticos aparecem em vermelho e também deixam o card destacado.", side: "left" },
+    { selector: "#projectList", title: "Fotos e liberação", text: "Use Abrir câmera para registrar fotos por ambiente e Liberar projeto quando a medição estiver pronta para o projetista.", side: "right" },
+    { selector: "#projectList", title: "Alertas no detalhe", text: "Leia alertas antes de medir. Alertas críticos aparecem em vermelho e também deixam o card destacado.", side: "right" },
     { selector: "[data-view='drive']", title: "Pastas automáticas", text: "As fotos ficam organizadas por cliente, projeto, etapa de medição e ambiente.", side: "right" },
   ],
   projetista: [
     { selector: "[data-view='projects']", title: "Projetos liberados", text: "O projetista vê apenas projetos atribuídos a ele, já com as fotos e ambientes vindos da medição.", side: "right" },
-    { selector: "#detailPanel", title: "Start e checklist", text: "Registre o início do desenvolvimento e marque ambiente por ambiente quando o técnico estiver concluído.", side: "left" },
-    { selector: "#detailPanel", title: "Alertas de projeto", text: "Crie alertas quando identificar risco técnico, mudança de obra ou informação importante para montagem.", side: "left" },
+    { selector: "#projectList", title: "Start e checklist", text: "Registre o início do desenvolvimento e marque ambiente por ambiente quando o técnico estiver concluído.", side: "right" },
+    { selector: "#projectList", title: "Alertas de projeto", text: "Crie alertas quando identificar risco técnico, mudança de obra ou informação importante para montagem.", side: "right" },
     { selector: "[data-view='purchases']", title: "Pedidos especiais", text: "Solicite ferragens, LEDs e materiais fora do padrão para análise e aprovação do ADM.", side: "right" },
     { selector: "[data-view='drive']", title: "Arquivos técnicos", text: "Separe arquivo de fábrica em Engenharia e arquivo de visualização em Obra para a equipe de montagem.", side: "right" },
   ],
   comprador: [
     { selector: "[data-view='purchases']", title: "Itens aprovados", text: "O comprador vê somente projetos vinculados ao seu usuário e com compras aprovadas pelo ADM.", side: "right" },
-    { selector: "#detailPanel", title: "Compra e entrega", text: "Atualize itens para comprado, acompanhe entrega na fábrica e mantenha comprovantes ligados ao projeto.", side: "left" },
-    { selector: "#searchInput", title: "Busca de suprimentos", text: "Localize rapidamente projetos por cliente, número ou endereço antes de cotar ou registrar uma compra.", side: "left" },
+    { selector: "#projectList", title: "Compra e entrega", text: "Atualize itens para comprado, acompanhe entrega na fábrica e mantenha comprovantes ligados ao projeto.", side: "right" },
+    { selector: "#searchInput", title: "Busca de suprimentos", text: "Localize rapidamente projetos por cliente, número ou endereço antes de cotar ou registrar uma compra.", side: "right" },
   ],
   montador: [
     { selector: "[data-view='projects']", title: "Roteiro de montagem", text: "O montador enxerga apenas obras onde foi escalado pelo ADM, com data, endereço e status.", side: "right" },
-    { selector: "#detailPanel", title: "Obra no celular", text: "Abra rota no Maps, consulte arquivos da pasta Obra, leia alertas e marque o checklist de montagem por ambiente.", side: "left" },
+    { selector: "#projectList", title: "Obra no celular", text: "Abra rota no Maps, consulte arquivos da pasta Obra, leia alertas e marque o checklist de montagem por ambiente.", side: "right" },
     { selector: "#projectList", title: "Card vermelho", text: "Quando existir alerta crítico aberto, o card aparece em vermelho para evitar que a equipe ignore riscos antes da execução.", side: "right" },
     { selector: "[data-view='alerts']", title: "Pendências e assistência", text: "Ao relatar pendência, o ADM recebe alerta vermelho para fabricar reposição ou tratar pós-venda.", side: "right" },
   ],
   cliente: [
     { selector: "#projectList", title: "Acompanhamento", text: "O cliente acessa apenas projetos vinculados ao e-mail dele. Sem vínculo, nenhum dado interno aparece.", side: "right" },
-    { selector: "#detailPanel", title: "Status da obra", text: "Veja etapa atual, previsão de montagem e evolução dos ambientes sem acessar compras ou alertas internos.", side: "left" },
+    { selector: "#projectList", title: "Status da obra", text: "Veja etapa atual, previsão de montagem e evolução dos ambientes sem acessar compras ou alertas internos.", side: "right" },
     { selector: "[data-view='drive']", title: "Arquivos liberados", text: "O cliente acessa somente os arquivos de visualização da pasta Obra.", side: "right" },
   ],
 };
@@ -889,6 +890,8 @@ function openAlertDialog(projectId, alertId = "") {
 }
 
 function renderPeople() {
+  contentGrid.classList.remove("accordion-layout");
+  detailPanel.hidden = false;
   renderMetrics(filteredProjects());
   const visiblePeople = state.people.filter((person) => person.active !== false);
   const selectedId = state.selectedPersonId || visiblePeople[0]?.id || "";
@@ -1056,11 +1059,13 @@ function tourKey() {
 }
 
 function renderProjects() {
+  contentGrid.classList.add("accordion-layout");
+  detailPanel.hidden = true;
   const projects = filteredProjects();
   renderMetrics(projects);
 
   if (!projects.some((project) => project.id === state.selectedProjectId)) {
-    state.selectedProjectId = projects[0]?.id ?? "";
+    state.selectedProjectId = "";
   }
 
   if (!projects.length) {
@@ -1069,9 +1074,6 @@ function renderProjects() {
         Nenhum projeto vinculado a este usuário no momento.
       </div>
     `;
-    detailPanel.innerHTML = requireAdmin()
-      ? `<div class="empty-state">Use Nova pessoa e Novo projeto para iniciar o piloto com dados reais.</div>`
-      : `<div class="empty-state">Quando o ADM vincular você a um projeto, ele aparecerá aqui automaticamente.</div>`;
     return;
   }
 
@@ -1080,52 +1082,69 @@ function renderProjects() {
       (project) => {
         const schedule = projectSchedule(project);
         const critical = hasCriticalAlert(project);
+        const expanded = project.id === state.selectedProjectId;
         return `
-      <article class="project-card ${project.id === state.selectedProjectId ? "active" : ""} ${critical ? "has-critical-alert" : ""}" data-project-id="${escapeAttr(project.id)}">
-        <div>
-          <h3>${escapeHtml(project.number)} · ${escapeHtml(project.client)}</h3>
-          <p class="meta">${escapeHtml(project.address)}</p>
-          <div class="project-tags">
-            ${critical ? `<span class="alert-pill critical">Alerta crítico</span>` : ""}
-            <span class="tag">${scheduleLabels[schedule.type]} ${formatDate(schedule.date)}</span>
-            <span class="tag">Medidor ${escapeHtml(personName(project.medidorId))}</span>
-            <span class="tag">Projetista ${escapeHtml(personName(project.projetistaId))}</span>
-            <span class="tag">Montador ${escapeHtml(personName(project.montadorId))}</span>
+      <article class="project-card ${expanded ? "active" : ""} ${critical ? "has-critical-alert" : ""}" data-project-id="${escapeAttr(project.id)}">
+        <button class="project-card-header" data-project-toggle="${escapeAttr(project.id)}" type="button" aria-expanded="${expanded ? "true" : "false"}">
+          <div>
+            <span class="eyebrow">${escapeHtml(project.number)}</span>
+            <h3>${escapeHtml(project.client)}</h3>
+            <p class="meta">${escapeHtml(project.address)}</p>
+            <div class="project-tags">
+              ${critical ? `<span class="alert-pill critical">Alerta crítico</span>` : ""}
+              <span class="tag">${scheduleLabels[schedule.type]} ${formatDate(schedule.date)}</span>
+              <span class="tag">${escapeHtml(statusLabels[project.status] || project.status)}</span>
+            </div>
           </div>
-        </div>
-        <div>
-          <span class="status-pill status-${escapeAttr(project.status)}">${escapeHtml(statusLabels[project.status] || project.status)}</span>
-        </div>
+          <span class="project-chevron" aria-hidden="true">${expanded ? "−" : "+"}</span>
+        </button>
+        ${expanded ? renderExpandedProject(project) : ""}
       </article>
     `;
       },
     )
     .join("");
 
-  document.querySelectorAll("[data-project-id]").forEach((card) => {
-    card.addEventListener("click", () => {
-      state.selectedProjectId = card.dataset.projectId;
+  projectList.querySelectorAll("[data-project-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedProjectId = state.selectedProjectId === button.dataset.projectToggle ? "" : button.dataset.projectToggle;
       renderProjects();
     });
   });
 
-  renderDetail();
+  projectList.querySelectorAll("[data-action]").forEach((button) => {
+    const projectId = button.closest("[data-project-id]")?.dataset.projectId;
+    if (projectId) button.addEventListener("click", () => handleAction(button.dataset.action, projectId, button.dataset.extra));
+  });
+
+  projectList.querySelectorAll("[data-edit-alert]").forEach((button) => {
+    const projectId = button.closest("[data-project-id]")?.dataset.projectId;
+    if (projectId) button.addEventListener("click", () => openAlertDialog(projectId, button.dataset.editAlert));
+  });
+
+  projectList.querySelectorAll("[data-check]").forEach((input) => {
+    const projectId = input.closest("[data-project-id]")?.dataset.projectId;
+    if (projectId) input.addEventListener("change", () => updateRoomCheck(projectId, input.dataset.room, input.dataset.check, input.checked));
+  });
+
+  projectList.querySelectorAll("[data-support-note]").forEach((input) => {
+    const projectId = input.closest("[data-project-id]")?.dataset.projectId;
+    if (projectId) input.addEventListener("change", () => updateSupportNote(projectId, input.dataset.room, input.value));
+  });
 }
 
-function renderDetail() {
-  const project = state.projects.find((item) => item.id === state.selectedProjectId);
-  if (!project) return;
+function renderExpandedProject(project) {
   const schedule = projectSchedule(project);
 
-  detailPanel.innerHTML = `
-    <div>
-      <p class="eyebrow">${escapeHtml(project.number)}</p>
-      <h2>${escapeHtml(project.client)}</h2>
-      <p class="meta">${escapeHtml(project.address)}</p>
+  return `
+    <div class="project-expanded">
       <div class="project-tags">
         <span class="tag">Agenda ativa: ${escapeHtml(scheduleLabels[schedule.type])}</span>
         ${project.measurementDate ? `<span class="tag">Medição ${formatDate(project.measurementDate)}</span>` : ""}
         ${project.installDate ? `<span class="tag">Montagem ${formatDate(project.installDate)}</span>` : ""}
+        <span class="tag">Medidor ${escapeHtml(personName(project.medidorId))}</span>
+        <span class="tag">Projetista ${escapeHtml(personName(project.projetistaId))}</span>
+        <span class="tag">Montador ${escapeHtml(personName(project.montadorId))}</span>
       </div>
       <div class="action-row">
         ${requireAdmin() ? `<button class="secondary-action" data-action="editProject" type="button">Editar projeto</button>` : ""}
@@ -1137,22 +1156,6 @@ function renderDetail() {
     ${state.role === "cliente" ? "" : renderAlerts(project)}
     ${renderDrive(project)}
   `;
-
-  detailPanel.querySelectorAll("[data-action]").forEach((button) => {
-    button.addEventListener("click", () => handleAction(button.dataset.action, project.id, button.dataset.extra));
-  });
-
-  detailPanel.querySelectorAll("[data-edit-alert]").forEach((button) => {
-    button.addEventListener("click", () => openAlertDialog(project.id, button.dataset.editAlert));
-  });
-
-  detailPanel.querySelectorAll("[data-check]").forEach((input) => {
-    input.addEventListener("change", () => updateRoomCheck(project.id, input.dataset.room, input.dataset.check, input.checked));
-  });
-
-  detailPanel.querySelectorAll("[data-support-note]").forEach((input) => {
-    input.addEventListener("change", () => updateSupportNote(project.id, input.dataset.room, input.value));
-  });
 }
 
 function roleActionButtons(project) {
