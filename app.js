@@ -36,9 +36,10 @@ const TOUR_VERSION = "v4";
 const PRODUCTION_URL = "https://marcenaria-flow-erp.vercel.app";
 const SUPABASE_URL = "https://oouxuleswyfjqfczlouh.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_BX6RrygWROrTcdmjC8oKCw_gxre0b5e";
+const supabaseGlobal = window.supabase || (typeof supabase !== "undefined" ? supabase : null);
 const supabaseClient =
-  window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY
-    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  supabaseGlobal && SUPABASE_URL && SUPABASE_ANON_KEY
+    ? supabaseGlobal.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
 
 const state = {

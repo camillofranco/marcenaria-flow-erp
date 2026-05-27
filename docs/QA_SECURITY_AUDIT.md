@@ -1,6 +1,6 @@
 # QA E Auditoria De Seguranca
 
-Data: 2026-05-20
+Data: 2026-05-27
 
 Aplicacao: Marcenaria Flow ERP
 
@@ -16,7 +16,7 @@ Esta auditoria cobre o estado atual do piloto:
 - Service worker/PWA.
 - Supabase Auth.
 - Supabase Postgres/RLS.
-- Supabase Storage planejado.
+- Supabase Storage privado.
 - Riscos de exposicao de dados sensiveis.
 
 Nao substitui um pentest profissional, mas serve como checklist tecnico para reduzir risco antes do piloto real com cliente.
@@ -35,9 +35,9 @@ O sistema esta apto para piloto controlado, mas ainda nao deve ser tratado como 
 
 Classificacao atual apos as correcoes deste ciclo:
 
-- Risco para piloto controlado: medio.
+- Risco para piloto controlado: baixo/medio.
 - Risco para operacao comercial/SaaS: alto ate concluir itens pendentes.
-- Prioridade antes de escalar clientes: aplicar migracao `supabase/006_security_hardening.sql`, rotacionar segredos ja compartilhados fora de canal seguro, configurar Auth/SMTP/MFA e implementar upload real com RLS revisado.
+- Prioridade antes de escalar clientes: rotacionar segredos ja compartilhados fora de canal seguro, configurar Auth/SMTP/MFA, ativar monitoramento e ampliar testes automatizados por perfil.
 
 ## Correcoes Aplicadas Nesta Auditoria
 
@@ -53,6 +53,7 @@ Adicionado em `vercel.json`:
 Objetivo:
 
 - Reduzir risco de XSS.
+- Remover dependencia de script externo/CDN para login.
 - Bloquear framing/clickjacking.
 - Reduzir permissao de APIs sensiveis do navegador.
 - Evitar cache indevido em respostas administrativas.
@@ -71,6 +72,24 @@ Agora:
 - Cache restrito a shell/arquivos estaticos.
 - `/api/*` nunca e cacheado.
 - Chamadas externas, como Supabase, nao sao cacheadas pelo service worker.
+- Biblioteca do Supabase e cacheada como asset local versionado para reduzir falhas de login em mobile/PWA.
+
+### Login Mobile E Tablet
+
+Arquivos:
+
+- `index.html`
+- `styles.css`
+- `app.js`
+- `assets/vendor/supabase.min.js`
+
+Melhorias:
+
+- Supabase JS deixou de depender de CDN externo.
+- CSP passou a permitir scripts apenas de `self`.
+- Tela de login passou a respeitar `safe-area` de iOS/Android.
+- Card de login ficou mais transparente, com fallback para `100vh` e `100dvh`.
+- Validado em Chrome headless com perfis desktop, iPhone 13 e iPad.
 
 ### APIs Administrativas
 
@@ -78,6 +97,7 @@ Arquivos:
 
 - `api/create-user.js`
 - `api/manage-user.js`
+- `api/manage-file.js`
 
 Melhorias:
 
@@ -88,6 +108,7 @@ Melhorias:
 - Validacao de UUID para alteracao/exclusao de usuarios.
 - Limite de tamanho para campos textuais.
 - Perfil solicitante precisa estar ativo.
+- Operacoes de arquivo exigem JWT e vinculo ao projeto.
 
 ### XSS/HTML Injection
 
@@ -98,14 +119,15 @@ Melhorias:
 - Adicionados helpers `escapeHtml` e `escapeAttr`.
 - Campos vindos de usuarios/projetos/ambientes/compras/alertas/arquivos passaram a ser escapados nos principais pontos renderizados via `innerHTML`.
 
-### Superficie Legada
+### Superficie Legada E Residuos Locais
 
-Removidos arquivos legados de Netlify:
+Removidos/limpos arquivos legados ou residuos locais:
 
-- `netlify/functions/create-user.js`
-- `netlify.toml`
-- `_headers`
-- `_redirects`
+- `.netlify/`
+- `.vercel/`
+- `supabase/.temp/`
+- `marcenaria-flow-erp.zip`
+- `netlify/`
 
 Motivo:
 
@@ -114,8 +136,9 @@ Motivo:
 
 ### RLS E Storage
 
-Criada migracao:
+Migracoes criadas e aplicadas no Supabase:
 
+- `supabase/003_storage.sql`
 - `supabase/006_security_hardening.sql`
 
 Ela endurece:
@@ -124,6 +147,7 @@ Ela endurece:
 - Atualizacao de compras por ADM ou comprador vinculado.
 - Insercao de arquivos por membros do projeto.
 - Storage privado por `company_id` e `project_id`, nao apenas por empresa.
+- Bucket `project-files` privado, com politicas de leitura/escrita por vinculo.
 
 ### Smoke Test De Seguranca
 
@@ -138,6 +162,9 @@ Ele valida:
 - `Cache-Control: no-store` nas APIs.
 - Manifest PWA disponivel.
 - Service worker sem cache de `/api/*`.
+- API de arquivos bloqueando GET e usando `no-store`.
+- CSP sem dependencia de CDN de scripts.
+- Supabase JS local no cache do shell.
 
 ## Achados Por Severidade
 
@@ -154,15 +181,6 @@ Acao obrigatoria:
 - Alterar senha do usuario admin tecnico.
 - Revisar variaveis de ambiente na Vercel.
 - Remover tokens antigos depois da troca.
-
-#### Migracao de RLS ainda precisa ser aplicada no Supabase
-
-O arquivo `supabase/006_security_hardening.sql` esta criado, mas precisa ser executado no projeto Supabase real.
-
-Risco se nao aplicar:
-
-- Comprador pode ter visibilidade maior do que o necessario dentro da empresa.
-- Storage pode ficar amplo demais para todos os usuarios da mesma empresa quando upload real for implementado.
 
 ### Alto
 
@@ -188,13 +206,12 @@ Acao recomendada:
 - Usar Vercel/Cloudflare para rate limit.
 - Registrar eventos administrativos no `activity_log`.
 
-#### Upload real ainda nao esta concluido
+#### Upload real exige teste operacional com cliente
 
-Sem upload real, o piloto valida fluxo. Quando arquivos reais forem armazenados, o controle de acesso precisa ser testado com rigor.
+O app possui fluxo de arquivos e storage privado, mas o primeiro uso real deve ser acompanhado de perto em obra.
 
 Acao:
 
-- Implementar upload em storage privado.
 - Assinar URLs temporarias quando necessario.
 - Bloquear acesso publico.
 - Testar leitura por cada perfil.
@@ -291,9 +308,9 @@ Nao e risco de seguranca. Foi mantido para consistencia tecnica.
 
 ### Mobile/Webapp
 
-- [ ] Login legivel no celular.
-- [ ] Sidebar/nav utilizavel no celular.
-- [ ] Cards nao estouram largura.
+- [x] Login legivel no celular.
+- [ ] Sidebar/nav utilizavel no celular apos login real.
+- [ ] Cards nao estouram largura apos login real.
 - [ ] Modais funcionam no celular.
 - [ ] Tour nao sobrepoe controles importantes.
 - [ ] App pode ser adicionado a tela inicial.
@@ -301,11 +318,11 @@ Nao e risco de seguranca. Foi mantido para consistencia tecnica.
 ## Checklist Cyberseguranca Antes Do Cliente
 
 - [ ] Rotacionar segredos compartilhados fora de canal seguro.
-- [ ] Aplicar `supabase/006_security_hardening.sql`.
+- [x] Aplicar `supabase/006_security_hardening.sql`.
 - [ ] Revisar Supabase Security Advisor.
 - [ ] Revisar Supabase Performance Advisor.
 - [ ] Confirmar RLS em todas as tabelas.
-- [ ] Confirmar bucket `project-files` privado.
+- [x] Confirmar bucket `project-files` privado.
 - [ ] Configurar Auth Site URL e Redirect URLs.
 - [ ] Configurar SMTP proprio.
 - [ ] Configurar MFA na conta Supabase e GitHub.
@@ -320,6 +337,7 @@ Nao e risco de seguranca. Foi mantido para consistencia tecnica.
 node --check app.js
 node --check api/create-user.js
 node --check api/manage-user.js
+node --check api/manage-file.js
 node --check sw.js
 python3 -m json.tool vercel.json >/dev/null
 python3 -m json.tool manifest.webmanifest >/dev/null
@@ -331,13 +349,12 @@ node scripts/security-smoke.mjs
 ### Pode seguir para piloto se:
 
 - Segredos forem rotacionados.
-- Migracao `006_security_hardening.sql` for aplicada.
 - SMTP/redirect do Supabase forem configurados.
 - Testes de permissao por perfil passarem.
 
 ### Nao escalar para SaaS ainda ate:
 
-- Upload real estar protegido por Storage RLS.
+- Upload real estar validado em obra com cada perfil.
 - Logs/auditoria estarem implementados.
 - Rate limit/WAF estarem definidos.
 - Testes automatizados cobrirem perfis e APIs.

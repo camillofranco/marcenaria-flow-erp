@@ -47,7 +47,12 @@ body.auth-open {
     radial-gradient(circle at 50% 42%, rgba(255, 253, 248, 0.1), rgba(8, 12, 11, 0.16) 38%, rgba(8, 12, 11, 0.48)),
     linear-gradient(90deg, rgba(12, 18, 16, 0.52), rgba(12, 18, 16, 0.2) 50%, rgba(12, 18, 16, 0.05)),
     url("./assets/login-background.jpg") center / cover no-repeat;
-  padding: 18px;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
+  min-height: 100vh;
   min-height: 100dvh;
 }
 
@@ -63,14 +68,15 @@ body.auth-open {
   width: min(410px, 100%);
   display: grid;
   gap: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
   background:
-    linear-gradient(145deg, rgba(255, 253, 248, 0.24), rgba(255, 253, 248, 0.1)),
-    rgba(255, 253, 248, 0.02);
-  padding: 22px;
-  box-shadow: 0 22px 70px rgba(10, 13, 12, 0.26);
-  backdrop-filter: blur(5px) saturate(118%);
+    linear-gradient(145deg, rgba(255, 253, 248, 0.18), rgba(255, 253, 248, 0.06)),
+    rgba(255, 253, 248, 0.01);
+  padding: clamp(16px, 4vw, 22px);
+  box-shadow: 0 22px 70px rgba(10, 13, 12, 0.2);
+  backdrop-filter: blur(4px) saturate(112%);
+  -webkit-backdrop-filter: blur(4px) saturate(112%);
 }
 
 .auth-card label {
@@ -83,9 +89,9 @@ body.auth-open {
 .auth-card input {
   width: 100%;
   min-height: 42px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(221, 215, 204, 0.68);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.48);
+  background: rgba(255, 255, 255, 0.42);
   color: var(--ink);
   padding: 0 12px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
@@ -1316,7 +1322,11 @@ h2 {
 
   .auth-gate {
     align-items: end;
-    padding: 12px;
+    padding:
+      max(12px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
     background:
       linear-gradient(180deg, rgba(8, 12, 11, 0.08), rgba(8, 12, 11, 0.42)),
       url("./assets/login-background.jpg") center / cover no-repeat;
@@ -1324,10 +1334,11 @@ h2 {
 
   .auth-card {
     width: 100%;
+    max-height: calc(100vh - 24px);
     max-height: calc(100dvh - 24px);
     overflow-y: auto;
     gap: 12px;
-    padding: 18px;
+    padding: clamp(14px, 4vw, 18px);
   }
 
   .auth-logo {

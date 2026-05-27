@@ -16,11 +16,13 @@ async function get(path) {
 
 const home = await head("/");
 const homeHeaders = home.headers;
+const csp = homeHeaders.get("content-security-policy") || "";
 
 assert("home returns 200", home.status === 200, `status=${home.status}`);
 assert("CSP header present", Boolean(homeHeaders.get("content-security-policy")));
-assert("CSP blocks object-src", homeHeaders.get("content-security-policy")?.includes("object-src 'none'"));
-assert("CSP restricts frame ancestors", homeHeaders.get("content-security-policy")?.includes("frame-ancestors 'none'"));
+assert("CSP blocks object-src", csp.includes("object-src 'none'"));
+assert("CSP restricts frame ancestors", csp.includes("frame-ancestors 'none'"));
+assert("CSP avoids third-party scripts", !csp.includes("cdn.jsdelivr.net"));
 assert("HSTS present", Boolean(homeHeaders.get("strict-transport-security")));
 assert("nosniff present", homeHeaders.get("x-content-type-options") === "nosniff");
 assert("frame denied", homeHeaders.get("x-frame-options") === "DENY");
@@ -34,6 +36,10 @@ const manageUserGet = await head("/api/manage-user");
 assert("manage-user GET blocked", manageUserGet.status === 405, `status=${manageUserGet.status}`);
 assert("manage-user no-store", manageUserGet.headers.get("cache-control")?.includes("no-store"));
 
+const manageFileGet = await head("/api/manage-file");
+assert("manage-file GET blocked", manageFileGet.status === 405, `status=${manageFileGet.status}`);
+assert("manage-file no-store", manageFileGet.headers.get("cache-control")?.includes("no-store"));
+
 const manifest = await get("/manifest.webmanifest");
 const manifestJson = await manifest.json();
 assert("manifest available", manifest.status === 200, `status=${manifest.status}`);
@@ -45,6 +51,7 @@ const swText = await sw.text();
 assert("service worker available", sw.status === 200, `status=${sw.status}`);
 assert("service worker skips API cache", swText.includes('url.pathname.startsWith("/api/")'));
 assert("service worker same-origin guard", swText.includes("isSameOrigin"));
+assert("service worker caches local Supabase client", swText.includes("/assets/vendor/supabase.min.js"));
 
 const failed = checks.filter((check) => !check.ok);
 
