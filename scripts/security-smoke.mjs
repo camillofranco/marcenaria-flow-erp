@@ -23,6 +23,7 @@ assert("CSP header present", Boolean(homeHeaders.get("content-security-policy"))
 assert("CSP blocks object-src", csp.includes("object-src 'none'"));
 assert("CSP restricts frame ancestors", csp.includes("frame-ancestors 'none'"));
 assert("CSP avoids third-party scripts", !csp.includes("cdn.jsdelivr.net"));
+assert("CSP allows Supabase API only", csp.includes("https://*.supabase.co"));
 assert("HSTS present", Boolean(homeHeaders.get("strict-transport-security")));
 assert("nosniff present", homeHeaders.get("x-content-type-options") === "nosniff");
 assert("frame denied", homeHeaders.get("x-frame-options") === "DENY");
@@ -39,6 +40,13 @@ assert("manage-user no-store", manageUserGet.headers.get("cache-control")?.inclu
 const manageFileGet = await head("/api/manage-file");
 assert("manage-file GET blocked", manageFileGet.status === 405, `status=${manageFileGet.status}`);
 assert("manage-file no-store", manageFileGet.headers.get("cache-control")?.includes("no-store"));
+
+const config = await get("/api/config");
+const configJson = await config.json();
+assert("config endpoint available", config.status === 200, `status=${config.status}`);
+assert("config endpoint no-store", config.headers.get("cache-control")?.includes("no-store"));
+assert("config exposes only public Supabase settings", !("serviceRoleKey" in configJson) && !("dbPassword" in configJson));
+assert("config Supabase URL is valid when configured", !configJson.configured || String(configJson.supabaseUrl || "").endsWith(".supabase.co"));
 
 const manifest = await get("/manifest.webmanifest");
 const manifestJson = await manifest.json();

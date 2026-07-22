@@ -3,7 +3,7 @@
 .env
 .env.*
 !.env.example
-config.js
+/config.js
 .netlify/
 supabase/.temp/
 .vercel

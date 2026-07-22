@@ -34,13 +34,8 @@ const roleProfiles = {
 const STORAGE_KEY = "marcenaria-flow-pilot-v2";
 const TOUR_VERSION = "v4";
 const PRODUCTION_URL = "https://marcenaria-flow-erp.vercel.app";
-const SUPABASE_URL = "https://oouxuleswyfjqfczlouh.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_BX6RrygWROrTcdmjC8oKCw_gxre0b5e";
 const supabaseGlobal = window.supabase || (typeof supabase !== "undefined" ? supabase : null);
-const supabaseClient =
-  supabaseGlobal && SUPABASE_URL && SUPABASE_ANON_KEY
-    ? supabaseGlobal.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    : null;
+let supabaseClient = null;
 
 const state = {
   role: "adm",
@@ -373,11 +368,13 @@ function importPilotData(file) {
 }
 
 async function bootApp() {
+  await initRuntimeConfig();
+
   if (!supabaseClient) {
-    showAuthGate(false);
+    showAuthGate(true);
     renderPersonSelect();
     renderProjects();
-    maybeOpenFirstAccessTour();
+    showToast("Conexão com Supabase não configurada. Confirme as variáveis SUPABASE_URL e SUPABASE_ANON_KEY na Vercel.");
     return;
   }
 
@@ -390,6 +387,30 @@ async function bootApp() {
   showAuthGate(true);
   renderPersonSelect();
   renderProjects();
+}
+
+async function initRuntimeConfig() {
+  if (!supabaseGlobal) return;
+  try {
+    const response = await fetch("/api/config", { cache: "no-store" });
+    if (!response.ok) return;
+    const config = await response.json();
+    const supabaseUrl = String(config.supabaseUrl || "").trim();
+    const supabaseAnonKey = String(config.supabaseAnonKey || "").trim();
+    if (!config.configured || !isSupabaseUrl(supabaseUrl) || !supabaseAnonKey) return;
+    supabaseClient = supabaseGlobal.createClient(supabaseUrl, supabaseAnonKey);
+  } catch {
+    supabaseClient = null;
+  }
+}
+
+function isSupabaseUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname.endsWith(".supabase.co");
+  } catch {
+    return false;
+  }
 }
 
 async function startBackendSession(session) {
