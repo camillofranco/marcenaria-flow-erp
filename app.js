@@ -99,6 +99,7 @@ const importDataBtn = document.querySelector("#importDataBtn");
 const importDataInput = document.querySelector("#importDataInput");
 const authGate = document.querySelector("#authGate");
 const loginForm = document.querySelector("#loginForm");
+const loginSubmitBtn = document.querySelector("#loginSubmitBtn");
 const forgotPasswordBtn = document.querySelector("#forgotPasswordBtn");
 const changePasswordBtn = document.querySelector("#changePasswordBtn");
 const logoutBtn = document.querySelector("#logoutBtn");
@@ -2389,28 +2390,43 @@ document.querySelectorAll("[data-close-dialog]").forEach((button) => {
 
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (loginSubmitBtn.disabled) return;
   if (!supabaseClient) {
     showToast("Não foi possível carregar a conexão segura. Recarregue a página e tente novamente.");
     return;
   }
   const formData = new FormData(loginForm);
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email: String(formData.get("email")).trim(),
-    password: String(formData.get("password")),
-  });
-  if (error) {
-    showToast("Login não autorizado. Confira e-mail e senha.");
-    return;
-  }
+  const passwordInput = loginForm.elements.password;
+  loginSubmitBtn.disabled = true;
+  loginSubmitBtn.textContent = "Entrando...";
   try {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: String(formData.get("email")).trim(),
+      password: String(formData.get("password")),
+    });
+    if (error) {
+      passwordInput.value = "";
+      passwordInput.focus();
+      const tooManyAttempts = error.status === 429 || /rate limit|too many/i.test(error.message || "");
+      showToast(
+        tooManyAttempts
+          ? "Muitas tentativas seguidas. Aguarde alguns minutos ou use Esqueci minha senha."
+          : "E-mail ou senha incorretos. Digite a senha novamente ou use Esqueci minha senha.",
+      );
+      return;
+    }
     await startBackendSession(data.session);
     showToast("Login real conectado ao Supabase.");
   } catch (loadError) {
     showToast(friendlyError(loadError, "Login feito, mas não foi possível carregar o perfil."));
+  } finally {
+    loginSubmitBtn.disabled = false;
+    loginSubmitBtn.textContent = "Entrar";
   }
 });
 
 forgotPasswordBtn.addEventListener("click", async () => {
+  if (forgotPasswordBtn.disabled) return;
   if (!supabaseClient) {
     showToast("Não foi possível carregar a conexão segura. Recarregue a página e tente novamente.");
     return;
@@ -2421,14 +2437,19 @@ forgotPasswordBtn.addEventListener("click", async () => {
     return;
   }
   const redirectTo = window.location.origin === PRODUCTION_URL ? window.location.origin : PRODUCTION_URL;
-  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo,
-  });
-  showToast(
-    error
-      ? friendlyError(error, "Não foi possível enviar recuperação agora. Use a URL publicada e confirme o e-mail no Supabase.")
-      : "Enviamos um link de recuperação para o e-mail informado.",
-  );
+  forgotPasswordBtn.disabled = true;
+  forgotPasswordBtn.textContent = "Enviando...";
+  try {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
+    showToast(
+      error
+        ? friendlyError(error, "Não foi possível enviar a recuperação agora. Aguarde e tente novamente.")
+        : "Enviamos um link de recuperação para o e-mail informado.",
+    );
+  } finally {
+    forgotPasswordBtn.disabled = false;
+    forgotPasswordBtn.textContent = "Esqueci minha senha";
+  }
 });
 
 changePasswordBtn.addEventListener("click", () => {
