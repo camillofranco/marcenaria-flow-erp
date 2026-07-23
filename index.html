@@ -12,7 +12,7 @@
     <link rel="icon" href="./assets/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="./assets/favicon.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./styles.css?v=20260723-2" />
+    <link rel="stylesheet" href="./styles.css?v=20260723-4" />
   </head>
   <body>
     <section class="auth-gate" id="authGate">
@@ -114,7 +114,7 @@
           </div>
         </header>
 
-        <section id="toast" class="toast" hidden></section>
+        <section id="toast" class="toast" role="status" aria-live="polite" hidden></section>
 
         <section class="metrics" id="metrics"></section>
 
@@ -282,7 +282,7 @@
         <div class="form-grid">
           <label class="wide">
             Nova senha
-            <input name="newPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres" />
+            <input name="newPassword" type="password" required minlength="10" autocomplete="new-password" placeholder="10+ caracteres, A-z e número" />
           </label>
         </div>
         <menu class="modal-actions">
@@ -313,7 +313,7 @@
           </label>
           <label>
             Senha inicial
-            <input name="password" type="password" placeholder="Mínimo 6 caracteres" />
+            <input name="password" type="password" minlength="10" placeholder="10+ caracteres, A-z e número" />
           </label>
           <label>
             Perfil
@@ -338,6 +338,135 @@
       </form>
     </dialog>
 
+    <dialog id="purchaseDialog" class="modal">
+      <form method="dialog" class="modal-body" id="purchaseForm">
+        <input name="projectId" type="hidden" />
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Lista de compras</p>
+            <h2>Solicitar material</h2>
+          </div>
+          <button class="icon-button" data-close-dialog="purchaseDialog" aria-label="Fechar" type="button">×</button>
+        </div>
+        <div class="form-grid">
+          <label class="wide">
+            Material
+            <input name="material" required maxlength="180" placeholder="Ex: Perfil LED embutido 2 m" />
+          </label>
+          <label>
+            Quantidade
+            <input name="quantity" required maxlength="80" placeholder="Ex: 4 unidades" />
+          </label>
+          <label>
+            Ambiente
+            <select name="roomId"></select>
+          </label>
+          <label class="wide">
+            Observações
+            <textarea name="notes" rows="3" maxlength="600" placeholder="Modelo, acabamento, fornecedor sugerido ou prazo necessário"></textarea>
+          </label>
+        </div>
+        <menu class="modal-actions">
+          <button class="secondary-action" data-close-dialog="purchaseDialog" type="button">Cancelar</button>
+          <button class="primary-action" value="default" type="submit">Enviar para análise</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="fileDialog" class="modal">
+      <form method="dialog" class="modal-body" id="fileForm">
+        <input name="projectId" type="hidden" />
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Arquivos técnicos</p>
+            <h2>Anexar arquivos do projeto</h2>
+          </div>
+          <button class="icon-button" data-close-dialog="fileDialog" aria-label="Fechar" type="button">×</button>
+        </div>
+        <div class="form-grid">
+          <label class="wide">
+            Arquivo de fábrica
+            <input name="engineeringFile" type="file" accept=".pdf,.dwg,.dxf,.skp,.step,.stp" />
+          </label>
+          <label class="wide">
+            Arquivo de obra
+            <input name="workFile" type="file" accept=".pdf,image/*" />
+          </label>
+        </div>
+        <p class="meta">Envie pelo menos um arquivo. Limite de 20 MB por arquivo.</p>
+        <menu class="modal-actions">
+          <button class="secondary-action" data-close-dialog="fileDialog" type="button">Cancelar</button>
+          <button class="primary-action" value="default" type="submit">Enviar arquivos</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="invoiceDialog" class="modal">
+      <form method="dialog" class="modal-body" id="invoiceForm">
+        <input name="projectId" type="hidden" />
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Comprovante de compra</p>
+            <h2>Anexar fatura</h2>
+          </div>
+          <button class="icon-button" data-close-dialog="invoiceDialog" aria-label="Fechar" type="button">×</button>
+        </div>
+        <div class="form-grid">
+          <label class="wide">
+            Item aprovado
+            <select name="purchaseId" required></select>
+          </label>
+          <label class="wide">
+            Fatura ou comprovante
+            <input name="invoiceFile" type="file" accept=".pdf,image/*" required />
+          </label>
+        </div>
+        <p class="meta">Formatos PDF ou imagem, até 20 MB.</p>
+        <menu class="modal-actions">
+          <button class="secondary-action" data-close-dialog="invoiceDialog" type="button">Cancelar</button>
+          <button class="primary-action" value="default" type="submit">Anexar fatura</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="issueDialog" class="modal">
+      <form method="dialog" class="modal-body" id="issueForm">
+        <input name="projectId" type="hidden" />
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Assistência</p>
+            <h2>Relatar pendência</h2>
+          </div>
+          <button class="icon-button" data-close-dialog="issueDialog" aria-label="Fechar" type="button">×</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            Ambiente
+            <select name="roomId" required></select>
+          </label>
+          <label>
+            Prioridade
+            <select name="level">
+              <option value="critical">Crítica</option>
+              <option value="attention">Atenção</option>
+            </select>
+          </label>
+          <label class="wide">
+            Pendência
+            <input name="title" required maxlength="180" placeholder="Ex: Porta do armário precisa de reposição" />
+          </label>
+          <label class="wide">
+            Detalhes
+            <textarea name="description" rows="3" maxlength="600" placeholder="Descreva a peça, medida, acabamento e o que aconteceu"></textarea>
+          </label>
+        </div>
+        <menu class="modal-actions">
+          <button class="secondary-action" data-close-dialog="issueDialog" type="button">Cancelar</button>
+          <button class="primary-action" value="default" type="submit">Enviar pendência</button>
+        </menu>
+      </form>
+    </dialog>
+
     <section class="tour-layer" id="tourLayer" hidden>
       <div class="tour-backdrop"></div>
       <div class="tour-line" id="tourLine"></div>
@@ -358,7 +487,7 @@
       </article>
     </section>
 
-    <script src="./assets/vendor/supabase.min.js?v=20260723-2"></script>
-    <script src="./app.js?v=20260723-2"></script>
+    <script src="./assets/vendor/supabase.min.js?v=20260723-4"></script>
+    <script src="./app.js?v=20260723-4"></script>
   </body>
 </html>

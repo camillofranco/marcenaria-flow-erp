@@ -46,7 +46,7 @@ O sistema usa login real via Supabase Auth e aplica permissoes por perfil.
 
 - Visualiza apenas projetos em que esta vinculado.
 - Acompanha ambientes da obra.
-- Registra/simula fotos de medicao por ambiente.
+- Registra fotos reais de medicao por ambiente.
 - Libera o projeto para desenvolvimento.
 
 ### Projetista
@@ -55,14 +55,14 @@ O sistema usa login real via Supabase Auth e aplica permissoes por perfil.
 - Inicia o desenvolvimento tecnico.
 - Marca checklist de ambientes concluidos.
 - Solicita materiais especiais para compra.
-- Registra/simula arquivos de engenharia e obra.
+- Envia arquivos reais de engenharia e obra.
 
 ### Comprador
 
 - Visualiza projetos vinculados ao seu usuario.
 - Acompanha itens aprovados pelo ADM.
 - Atualiza status de compra.
-- Registra/simula faturas e comprovantes.
+- Envia faturas e comprovantes reais.
 
 ### Montador
 
@@ -112,7 +112,8 @@ O sistema usa login real via Supabase Auth e aplica permissoes por perfil.
 ├── vercel.json
 ├── api/
 │   ├── create-user.js
-│   └── manage-user.js
+│   ├── manage-user.js
+│   └── manage-file.js
 ├── assets/
 │   ├── favicon.png
 │   ├── flow-marcenaria-logo.png
@@ -131,7 +132,8 @@ O sistema usa login real via Supabase Auth e aplica permissoes por perfil.
     ├── 003_storage.sql
     ├── 004_seed_pilot.sql
     ├── 005_profiles_phone.sql
-    └── 006_security_hardening.sql
+    ├── 006_security_hardening.sql
+    └── 007_rbac_integrity.sql
 ```
 
 ## Funcionalidades Implementadas
@@ -145,14 +147,16 @@ O sistema usa login real via Supabase Auth e aplica permissoes por perfil.
 - Cadastro real de usuarios pelo ADM.
 - Alteracao e exclusao/desativacao de usuarios pelo ADM.
 - Criacao de projetos pelo ADM.
+- Edicao e exclusao de projetos pelo ADM.
 - Vinculo de medidor, projetista, comprador, montador e cliente ao projeto.
 - Cards de projetos por status.
 - Busca por projeto, cliente ou endereco.
 - Metricas operacionais.
 - Checklist de ambientes.
-- Lista de compras com aprovacao/status.
+- Lista de compras por item, com aprovacao, recusa, status e fatura.
 - Alertas por criticidade.
-- Simulacao de estrutura de arquivos por projeto.
+- Upload real de fotos, arquivos tecnicos e comprovantes no Supabase Storage privado.
+- Visualizacao e exclusao controlada de arquivos.
 - Tour guiado por perfil de usuario.
 - Layout responsivo mobile-first.
 - Instalacao como webapp/PWA.
@@ -174,20 +178,19 @@ O piloto ainda nao deve ser vendido como SaaS final. Ele deve ser apresentado co
 
 ## Limitacoes Atuais
 
-- Upload real de arquivos ainda nao esta finalizado.
-- Fotos e arquivos estao representados no fluxo, mas ainda precisam de integracao definitiva com Supabase Storage ou Google Drive.
 - Notificacoes push/e-mail ainda nao estao implementadas como automacao completa.
 - Recuperacao de senha depende da configuracao correta de e-mail/SMTP e redirect URLs no Supabase.
 - Ainda nao ha painel financeiro completo para compras.
 - Ainda nao ha multiempresa comercial com onboarding self-service.
+- Monitoramento centralizado, WAF/rate limit proprio e testes de UI no CI ainda sao etapas para o SaaS.
 
 ## Proximos Passos Tecnicos
 
-1. Configurar URLs e e-mail transacional do Supabase Auth.
-2. Implementar upload real para Supabase Storage ou Google Drive.
-3. Criar automacoes de notificacao para ADM, comprador e montador.
-4. Criar fluxo de convite de usuarios por e-mail.
-5. Melhorar auditoria de eventos.
+1. Configurar e-mail transacional proprio do Supabase Auth.
+2. Criar automacoes de notificacao para ADM, comprador e montador.
+3. Criar fluxo de convite de usuarios por e-mail.
+4. Melhorar auditoria de eventos e monitoramento.
+5. Automatizar testes de UI no CI.
 6. Criar dashboard de saude do piloto.
 7. Evoluir multiempresa, planos e cobranca para SaaS.
 
@@ -233,6 +236,16 @@ Smoke test de seguranca apos deploy:
 node scripts/security-smoke.mjs
 ```
 
+Smoke test de permissoes por perfil:
+
+```bash
+SUPABASE_URL=... \
+SUPABASE_ANON_KEY=... \
+SUPABASE_SERVICE_ROLE_KEY=... \
+APP_URL=https://marcenaria-flow-erp.vercel.app \
+node scripts/rbac-smoke.mjs
+```
+
 Arquivos relevantes:
 
 - `vercel.json`: headers e rewrites.
@@ -249,6 +262,7 @@ Scripts principais:
 - `supabase/004_seed_pilot.sql`: seed inicial.
 - `supabase/005_profiles_phone.sql`: campo de telefone em perfis.
 - `supabase/006_security_hardening.sql`: endurecimento de politicas para compras e arquivos.
+- `supabase/007_rbac_integrity.sql`: campos por papel, categorias do Storage e integridade entre registros.
 
 Regras importantes:
 

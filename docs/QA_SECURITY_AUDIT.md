@@ -1,6 +1,6 @@
 # QA E Auditoria De Seguranca
 
-Data: 2026-05-27
+Ultima revisao: 2026-07-23
 
 Aplicacao: Marcenaria Flow ERP
 
@@ -31,13 +31,48 @@ Nao substitui um pentest profissional, mas serve como checklist tecnico para red
 
 ## Resultado Executivo
 
-O sistema esta apto para piloto controlado, mas ainda nao deve ser tratado como SaaS final.
+O sistema esta apto para piloto real controlado, mas ainda nao deve ser tratado como SaaS final.
 
 Classificacao atual apos as correcoes deste ciclo:
 
-- Risco para piloto controlado: baixo/medio.
+- Risco para piloto controlado: baixo, desde que os segredos compartilhados sejam rotacionados.
 - Risco para operacao comercial/SaaS: alto ate concluir itens pendentes.
 - Prioridade antes de escalar clientes: rotacionar segredos ja compartilhados fora de canal seguro, configurar Auth/SMTP/MFA, ativar monitoramento e ampliar testes automatizados por perfil.
+
+## Reauditoria De 23/07/2026
+
+Correcoes adicionais aplicadas:
+
+- Login validado novamente em producao.
+- Logout agora remove projetos, pessoas e identificadores do DOM/estado local.
+- Perfil inativo ou incompleto nao deixa uma sessao parcialmente aberta.
+- Senha inicial e alteracao de senha exigem no minimo 10 caracteres, com letra maiuscula, minuscula e numero, em paridade com o Supabase Auth.
+- Reautenticacao para troca de senha sensivel esta habilitada no Supabase Auth.
+- A verificacao de senhas vazadas (HaveIBeenPwned) exige plano Supabase Pro e permanece como pendencia externa enquanto o projeto estiver no plano gratuito.
+- Dados pessoais de perfis ficaram restritos ao proprio usuario e ao ADM.
+- Diretorio operacional por projeto expoe apenas nome, papel e identificadores necessarios.
+- Campos de projeto, ambiente e compra passaram a ser limitados por papel no banco.
+- Comprador ve apenas compras aprovadas e nao consegue alterar aprovacao.
+- Cliente acessa apenas arquivos da categoria Obra.
+- Storage separa leitura e escrita por papel e categoria.
+- Integridade entre empresa, projeto, ambiente e arquivos e validada por triggers.
+- ADM pode excluir projeto e alerta de forma real.
+- Edicao de projeto remove ambientes retirados do formulario.
+- Fotos, arquivos tecnicos e faturas usam upload real no bucket privado.
+- Solicitacao de compra, aprovacao, recusa e status passaram a operar por item.
+- Pendencia do montador agora registra ambiente, prioridade e descricao reais.
+- Uploads foram limitados a 20 MB e tipos esperados; SVG nao e aceito como imagem.
+- APIs administrativas ganharam rollback compensatorio para evitar Auth e perfil divergentes.
+
+Validacoes executadas:
+
+- 30 testes automatizados de RBAC com usuarios temporarios dos seis perfis.
+- Ciclo administrativo de usuario validado pela API publicada: criar, alterar, desativar e bloquear novo login.
+- Teste real de criacao e edicao de projeto, remocao de ambiente e criacao de alerta.
+- Teste de cancelamento sem validacao nos formularios de projeto, pessoa e alerta.
+- Testes visuais em 390x844, 768x1024 e desktop, sem overflow horizontal.
+- Limpeza confirmada de empresas, usuarios e projetos temporarios de QA.
+- Security Advisor reexecutado: nenhum erro critico; restam sete avisos esperados para funcoes `security definer` usadas pelo RLS e um aviso de protecao contra senhas vazadas, recurso disponivel no plano Supabase Pro.
 
 ## Correcoes Aplicadas Nesta Auditoria
 
@@ -228,15 +263,14 @@ Acao:
 - Registrar falhas de login relevantes via Supabase/Vercel.
 - Criar rotina de revisao semanal durante piloto.
 
-#### Sem testes automatizados
+#### Cobertura automatizada ainda nao e completa
 
-Hoje a validacao e manual/estatica.
+Existem smoke tests de seguranca e RBAC, mas ainda falta uma suite continua de UI executada no CI.
 
 Acao:
 
-- Criar testes de permissao por perfil.
-- Criar testes API para usuario nao ADM.
-- Criar testes de UI mobile.
+- Automatizar os fluxos de navegador no GitHub Actions.
+- Manter a matriz de permissao atualizada ao criar novas funcoes.
 
 #### PWA com cache do shell
 
@@ -257,51 +291,51 @@ Nao e risco de seguranca. Foi mantido para consistencia tecnica.
 
 ### Login
 
-- [ ] Login ADM tecnico.
+- [x] Login ADM tecnico.
 - [ ] Login ADM cliente.
 - [ ] Login medidor.
 - [ ] Login projetista.
 - [ ] Login comprador.
 - [ ] Login montador.
 - [ ] Login cliente.
-- [ ] Logout limpa a sessao visual.
+- [x] Logout limpa a sessao visual e os dados carregados.
 - [ ] Alterar senha funciona para usuario logado.
 - [ ] Recuperacao de senha envia e-mail depois de configurar SMTP/redirect.
 
 ### Usuarios
 
-- [ ] ADM cria usuario.
-- [ ] ADM altera usuario.
-- [ ] ADM desativa/exclui usuario sem vinculo.
-- [ ] ADM nao exclui proprio usuario.
+- [x] ADM cria usuario.
+- [x] ADM altera usuario.
+- [x] ADM desativa/exclui usuario sem vinculo.
+- [x] ADM nao exclui proprio usuario.
 - [ ] Usuario comum nao ve tela Pessoas.
-- [ ] Usuario comum nao chama API administrativa com sucesso.
+- [x] Usuario comum nao chama API administrativa com sucesso.
 
 ### Projetos
 
-- [ ] ADM cria projeto real.
+- [x] ADM cria projeto real.
 - [ ] Projeto exige campos obrigatorios.
-- [ ] Cancelar modal nao exige preenchimento.
+- [x] Cancelar modal nao exige preenchimento.
 - [ ] Responsaveis aparecem nos selects.
-- [ ] Busca filtra projeto/cliente/endereco.
-- [ ] Status visual correto.
+- [x] Busca filtra projeto/cliente/endereco.
+- [x] Status visual correto.
 
 ### Permissoes
 
-- [ ] ADM ve todos os projetos da empresa.
-- [ ] Medidor ve apenas projetos vinculados.
-- [ ] Projetista ve apenas projetos vinculados.
-- [ ] Comprador ve apenas projetos vinculados/compras relevantes.
-- [ ] Montador ve apenas projetos vinculados.
-- [ ] Cliente ve apenas o proprio projeto.
-- [ ] Usuario sem vinculo nao ve projetos.
+- [x] ADM ve todos os projetos da empresa.
+- [x] Medidor ve apenas projetos vinculados.
+- [x] Projetista ve apenas projetos vinculados.
+- [x] Comprador ve apenas projetos vinculados e compras aprovadas.
+- [x] Montador ve apenas projetos vinculados.
+- [x] Cliente ve apenas o proprio projeto.
+- [x] Usuario sem vinculo nao ve projetos.
 
 ### Fluxo
 
-- [ ] Medidor simula fotos e libera projeto.
-- [ ] Projetista da start, marca checklist e solicita compra.
-- [ ] ADM aprova compra.
-- [ ] Comprador marca comprado/anexa fatura simulada.
+- [x] Medidor envia fotos reais e libera projeto.
+- [x] Projetista da start, marca checklist e solicita compra.
+- [x] ADM aprova ou recusa compra.
+- [x] Comprador atualiza status e anexa fatura real.
 - [ ] Montador abre rota e registra pendencia.
 - [ ] ADM ve alerta critico.
 - [ ] Cliente acompanha status sem informacoes internas.
@@ -309,9 +343,9 @@ Nao e risco de seguranca. Foi mantido para consistencia tecnica.
 ### Mobile/Webapp
 
 - [x] Login legivel no celular.
-- [ ] Sidebar/nav utilizavel no celular apos login real.
-- [ ] Cards nao estouram largura apos login real.
-- [ ] Modais funcionam no celular.
+- [x] Sidebar/nav utilizavel no celular apos login real.
+- [x] Cards nao estouram largura apos login real.
+- [x] Modais funcionam no celular.
 - [ ] Tour nao sobrepoe controles importantes.
 - [ ] App pode ser adicionado a tela inicial.
 
@@ -319,17 +353,18 @@ Nao e risco de seguranca. Foi mantido para consistencia tecnica.
 
 - [ ] Rotacionar segredos compartilhados fora de canal seguro.
 - [x] Aplicar `supabase/006_security_hardening.sql`.
+- [x] Aplicar `supabase/007_rbac_integrity.sql`.
 - [ ] Revisar Supabase Security Advisor.
 - [ ] Revisar Supabase Performance Advisor.
-- [ ] Confirmar RLS em todas as tabelas.
+- [x] Confirmar RLS e escopo de campos nas tabelas operacionais.
 - [x] Confirmar bucket `project-files` privado.
 - [ ] Configurar Auth Site URL e Redirect URLs.
 - [ ] Configurar SMTP proprio.
 - [ ] Configurar MFA na conta Supabase e GitHub.
 - [ ] Configurar acesso da Vercel com 2FA.
 - [ ] Revisar variaveis de ambiente na Vercel.
-- [ ] Fazer teste de usuario comum tentando acessar dados de outro perfil.
-- [ ] Fazer teste de API administrativa sem token e com usuario nao ADM.
+- [x] Fazer teste de usuario comum tentando acessar dados de outro perfil.
+- [x] Fazer teste de API administrativa sem token e com usuario nao ADM.
 
 ## Comandos De Validacao Local
 
@@ -342,6 +377,7 @@ node --check sw.js
 python3 -m json.tool vercel.json >/dev/null
 python3 -m json.tool manifest.webmanifest >/dev/null
 node scripts/security-smoke.mjs
+SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/rbac-smoke.mjs
 ```
 
 ## Recomendacao De Go/No-Go
@@ -354,7 +390,7 @@ node scripts/security-smoke.mjs
 
 ### Nao escalar para SaaS ainda ate:
 
-- Upload real estar validado em obra com cada perfil.
+- Upload real estar validado na rede e nos aparelhos usados pela marcenaria.
 - Logs/auditoria estarem implementados.
 - Rate limit/WAF estarem definidos.
 - Testes automatizados cobrirem perfis e APIs.

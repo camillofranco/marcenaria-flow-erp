@@ -2,8 +2,10 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const validRoles = new Set(["adm", "medidor", "projetista", "comprador", "montador", "cliente"]);
 const MAX_FIELD_LENGTH = 180;
+const MIN_PASSWORD_LENGTH = 10;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const strongPasswordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
 
 const headers = {
   "Content-Type": "application/json",
@@ -58,8 +60,10 @@ async function updateUser(res, requester, payload) {
   if (!validRoles.has(role)) {
     return response(res, 400, { error: "Invalid user role." });
   }
-  if (password && String(password).length < 6) {
-    return response(res, 400, { error: "Password must have at least 6 characters." });
+  if (password && !isStrongPassword(password)) {
+    return response(res, 400, {
+      error: `Password must have at least ${MIN_PASSWORD_LENGTH} characters, including uppercase, lowercase and a number.`,
+    });
   }
 
   const target = await getProfileById(id);
@@ -72,12 +76,27 @@ async function updateUser(res, requester, payload) {
   }
 
   try {
-    await updateAuthUser({ id, email, fullName, role, password });
     const profile = await updateProfile({ id, email, fullName, role, phone });
+    try {
+      await updateAuthUser({ id, email, fullName, role, password });
+    } catch (authError) {
+      await patchProfile(id, {
+        full_name: target.full_name,
+        email: target.email,
+        role: target.role,
+        phone: target.phone || "",
+        active: target.active,
+      }).catch(() => {});
+      throw authError;
+    }
     return response(res, 200, { profile });
   } catch (error) {
     return response(res, 400, { error: error.message || "Could not update user." });
   }
+}
+
+function isStrongPassword(password) {
+  return String(password).length >= MIN_PASSWORD_LENGTH && strongPasswordPattern.test(String(password));
 }
 
 async function deleteUser(res, requester, payload) {
@@ -102,7 +121,12 @@ async function deleteUser(res, requester, payload) {
 
   try {
     const profile = await patchProfile(id, { active: false });
-    await updateAuthUser({ id, fullName: target.full_name, email: target.email, role: target.role, banned: true });
+    try {
+      await updateAuthUser({ id, fullName: target.full_name, email: target.email, role: target.role, banned: true });
+    } catch (authError) {
+      await patchProfile(id, { active: true }).catch(() => {});
+      throw authError;
+    }
     return response(res, 200, { profile });
   } catch (error) {
     return response(res, 400, { error: error.message || "Could not delete user." });

@@ -36,7 +36,7 @@ module.exports = async function handler(req, res) {
   if (!file) return response(res, 404, { error: "File not found." });
 
   const project = await getProject(file.project_id);
-  if (!project || !canManageFile(requester, project)) {
+  if (!project || !canManageFile(requester, project, file)) {
     return response(res, 403, { error: "You cannot manage this project file." });
   }
 
@@ -51,10 +51,16 @@ module.exports = async function handler(req, res) {
   return response(res, 200, { success: true });
 };
 
-function canManageFile(requester, project) {
+function canManageFile(requester, project, file) {
   if (requester.platform_admin) return true;
   if (requester.company_id !== project.company_id) return false;
-  return requester.role === "adm" || project.medidor_id === requester.id || project.projetista_id === requester.id;
+  if (requester.role === "adm") return true;
+  if (requester.role === "medidor") return project.medidor_id === requester.id && file.category === "medicao";
+  if (requester.role === "projetista") {
+    return project.projetista_id === requester.id && ["engenharia", "obra"].includes(file.category);
+  }
+  if (requester.role === "comprador") return project.comprador_id === requester.id && file.category === "compras";
+  return requester.role === "montador" && project.montador_id === requester.id && file.category === "assistencia";
 }
 
 async function getRequesterProfile(token) {
@@ -112,10 +118,14 @@ async function updateProjectFile(id, body) {
 
 async function deleteProjectFile(file) {
   const storagePath = encodeStoragePath(file.storage_path);
-  await fetch(`${SUPABASE_URL}/storage/v1/object/${file.storage_bucket || "project-files"}/${storagePath}`, {
+  const storageResponse = await fetch(`${SUPABASE_URL}/storage/v1/object/${file.storage_bucket || "project-files"}/${storagePath}`, {
     method: "DELETE",
     headers: serviceHeaders(),
   });
+  if (!storageResponse.ok && storageResponse.status !== 404) {
+    const data = await storageResponse.json().catch(() => ({}));
+    throw new Error(data.message || data.error || "Could not delete stored file.");
+  }
   const response = await fetch(`${SUPABASE_URL}/rest/v1/project_files?id=eq.${file.id}`, {
     method: "DELETE",
     headers: serviceHeaders(),

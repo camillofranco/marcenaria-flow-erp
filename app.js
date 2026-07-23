@@ -81,6 +81,14 @@ const personForm = document.querySelector("#personForm");
 const personDialogTitle = document.querySelector("#personDialogTitle");
 const passwordDialog = document.querySelector("#passwordDialog");
 const passwordForm = document.querySelector("#passwordForm");
+const purchaseDialog = document.querySelector("#purchaseDialog");
+const purchaseForm = document.querySelector("#purchaseForm");
+const fileDialog = document.querySelector("#fileDialog");
+const fileForm = document.querySelector("#fileForm");
+const invoiceDialog = document.querySelector("#invoiceDialog");
+const invoiceForm = document.querySelector("#invoiceForm");
+const issueDialog = document.querySelector("#issueDialog");
+const issueForm = document.querySelector("#issueForm");
 const tourLayer = document.querySelector("#tourLayer");
 const tourPopover = document.querySelector("#tourPopover");
 const tourLine = document.querySelector("#tourLine");
@@ -274,9 +282,12 @@ function requireAdmin() {
   return state.profile?.platform_admin || state.profile?.role === "adm";
 }
 
+function isAdminView() {
+  return state.role === "adm" && (!state.backendMode || requireAdmin());
+}
+
 function canEditRoomField(field) {
-  if (!state.backendMode && state.role === "adm") return true;
-  if (requireAdmin()) return true;
+  if (isAdminView()) return true;
   return {
     designDone: state.role === "projetista",
     installDone: state.role === "montador",
@@ -417,11 +428,34 @@ function isSupabaseUrl(value) {
 async function startBackendSession(session) {
   state.backendMode = true;
   state.session = session;
-  showAuthGate(false);
   exportDataBtn.hidden = true;
   importDataBtn.hidden = true;
-  await loadBackendData();
-  maybeOpenFirstAccessTour();
+  try {
+    await loadBackendData();
+    showAuthGate(false);
+    maybeOpenFirstAccessTour();
+  } catch (error) {
+    await supabaseClient.auth.signOut().catch(() => {});
+    clearBackendState();
+    showAuthGate(true);
+    throw error;
+  }
+}
+
+function clearBackendState() {
+  state.backendMode = false;
+  state.session = null;
+  state.profile = null;
+  state.companyId = "";
+  state.projects = [];
+  state.people = [];
+  state.selectedProjectId = "";
+  state.selectedPersonId = "";
+  state.activePersonId = "";
+  state.role = "adm";
+  roleSelect.value = "adm";
+  renderPersonSelect();
+  setView("dashboard");
 }
 
 async function loadBackendData() {
@@ -438,8 +472,12 @@ async function loadBackendData() {
   state.activePersonId = profile.id;
   roleSelect.value = state.role;
 
+  const peopleQuery =
+    profile.platform_admin || profile.role === "adm"
+      ? supabaseClient.from("profiles").select("*").eq("company_id", state.companyId).eq("active", true).order("full_name")
+      : supabaseClient.rpc("project_directory");
   const [{ data: profiles, error: peopleError }, { data: projects, error: projectsError }] = await Promise.all([
-    supabaseClient.from("profiles").select("*").eq("company_id", state.companyId).eq("active", true).order("full_name"),
+    peopleQuery,
     supabaseClient.from("projects").select("*").order("install_date", { ascending: true }),
   ]);
   if (peopleError) throw peopleError;
@@ -457,7 +495,9 @@ async function loadBackendData() {
     if (result.error) throw result.error;
   });
 
-  state.people = (profiles || []).map(mapProfile);
+  const visibleProfiles = [...(profiles || [])];
+  if (!visibleProfiles.some((person) => person.id === profile.id)) visibleProfiles.push(profile);
+  state.people = visibleProfiles.map(mapProfile);
   state.projects = (projects || []).map((project) =>
     mapProject(project, roomsResult.data || [], purchasesResult.data || [], alertsResult.data || [], filesResult.data || []),
   );
@@ -533,6 +573,10 @@ function mapProject(project, rooms, purchases, alerts, files) {
         approval: item.approval,
         purchaseStatus: item.purchase_status,
         invoice: item.invoice_path || "",
+        roomId: item.room_id || "",
+        supplier: item.supplier || "",
+        estimatedCost: item.estimated_cost || "",
+        notes: item.notes || "",
       })),
     alerts: alerts
       .filter((alert) => alert.project_id === project.id)
@@ -706,26 +750,32 @@ async function createProjectBackend(formData, rooms) {
     .single();
   if (error) throw error;
 
-  if (rooms.length) {
-    const { error: roomsError } = await supabaseClient.from("rooms").insert(
-      rooms.map((name, index) => ({
-        company_id: state.companyId,
-        project_id: project.id,
-        name,
-        sort_order: index + 1,
-      })),
-    );
-    if (roomsError) throw roomsError;
-  }
+  try {
+    if (rooms.length) {
+      const { error: roomsError } = await supabaseClient.from("rooms").insert(
+        rooms.map((name, index) => ({
+          company_id: state.companyId,
+          project_id: project.id,
+          name,
+          sort_order: index + 1,
+        })),
+      );
+      if (roomsError) throw roomsError;
+    }
 
-  await supabaseClient.from("alerts").insert({
-    company_id: state.companyId,
-    project_id: project.id,
-    level: "info",
-    title: "Projeto criado pelo ADM",
-    description: alertDescription({ status: "open" }),
-    created_by: state.profile.id,
-  });
+    const { error: alertError } = await supabaseClient.from("alerts").insert({
+      company_id: state.companyId,
+      project_id: project.id,
+      level: "info",
+      title: "Projeto criado pelo ADM",
+      description: alertDescription({ status: "open" }),
+      created_by: state.profile.id,
+    });
+    if (alertError) throw alertError;
+  } catch (setupError) {
+    await supabaseClient.from("projects").delete().eq("id", project.id);
+    throw setupError;
+  }
 
   state.selectedProjectId = project.id;
   await loadBackendData();
@@ -774,6 +824,11 @@ async function updateProjectBackend(formData, rooms) {
   const results = await Promise.all(updates);
   const failed = results.find((result) => result.error);
   if (failed) throw failed.error;
+  const removedRoomIds = existingRooms.slice(rooms.length).map((room) => room.id).filter(Boolean);
+  if (removedRoomIds.length) {
+    const { error: deleteError } = await supabaseClient.from("rooms").delete().in("id", removedRoomIds);
+    if (deleteError) throw deleteError;
+  }
 
   state.selectedProjectId = projectId;
   await loadBackendData();
@@ -781,8 +836,8 @@ async function updateProjectBackend(formData, rooms) {
 
 async function createPersonBackend(formData) {
   const password = String(formData.get("password") || "").trim();
-  if (password.length < 6) {
-    throw new Error("Informe uma senha inicial com pelo menos 6 caracteres.");
+  if (!isStrongPassword(password)) {
+    throw new Error("Use ao menos 10 caracteres, incluindo letra maiúscula, minúscula e número.");
   }
 
   const response = await fetch("/api/create-user", {
@@ -813,6 +868,9 @@ async function updatePersonBackend(formData) {
   const id = String(formData.get("id") || "").trim();
   if (!id) throw new Error("Selecione um usuário para alterar.");
   const password = String(formData.get("password") || "").trim();
+  if (password && !isStrongPassword(password)) {
+    throw new Error("Use ao menos 10 caracteres, incluindo letra maiúscula, minúscula e número.");
+  }
   const response = await fetch("/api/manage-user", {
     method: "PATCH",
     headers: {
@@ -856,7 +914,7 @@ function openPersonDialog(person = null) {
   personForm.elements.password.value = "";
   personForm.elements.role.value = person?.role || "adm";
   personForm.elements.phone.value = person?.phone || "";
-  personForm.elements.password.placeholder = person ? "Opcional: nova senha" : "Mínimo 6 caracteres";
+  personForm.elements.password.placeholder = person ? "Opcional: nova senha" : "Mínimo 10 caracteres";
   personForm.elements.password.required = !person && isRealBackend();
   personDialogTitle.textContent = person ? "Alterar pessoa" : "Nova pessoa";
   personDialog.showModal();
@@ -1010,7 +1068,7 @@ function renderSessionBadge() {
 }
 
 function syncAccessUI() {
-  const admin = !state.backendMode || requireAdmin();
+  const admin = isAdminView();
   newProjectBtn.hidden = !admin;
   newPersonBtn.hidden = !admin;
   document.querySelector("[data-view='people']").hidden = !admin;
@@ -1092,6 +1150,53 @@ function openAlertDialog(projectId, alertId = "") {
   alertForm.elements.status.value = alert?.status || (alert?.resolved ? "done" : "open");
   alertForm.elements.title.value = alert?.title || "";
   alertDialog.showModal();
+}
+
+function fillRoomSelect(select, project, emptyLabel = "Sem ambiente específico") {
+  select.innerHTML =
+    `<option value="">${escapeHtml(emptyLabel)}</option>` +
+    project.rooms.map((room) => `<option value="${escapeAttr(room.id)}">${escapeHtml(room.name)}</option>`).join("");
+}
+
+function openPurchaseDialog(project) {
+  purchaseForm.reset();
+  purchaseForm.elements.projectId.value = project.id;
+  fillRoomSelect(purchaseForm.elements.roomId, project);
+  purchaseDialog.showModal();
+}
+
+function openFileDialog(project) {
+  fileForm.reset();
+  fileForm.elements.projectId.value = project.id;
+  fileDialog.showModal();
+}
+
+function openInvoiceDialog(project, purchaseId = "") {
+  const approved = project.purchases.filter((item) => item.approval === "aprovado");
+  if (!approved.length) {
+    showToast("Não há item aprovado disponível para receber uma fatura.");
+    return;
+  }
+  invoiceForm.reset();
+  invoiceForm.elements.projectId.value = project.id;
+  invoiceForm.elements.purchaseId.innerHTML = approved
+    .map((item) => `<option value="${escapeAttr(item.id)}">${escapeHtml(item.item)} · ${escapeHtml(item.qty)}</option>`)
+    .join("");
+  invoiceForm.elements.purchaseId.value = purchaseId || approved[0].id;
+  invoiceDialog.showModal();
+}
+
+function openIssueDialog(project) {
+  if (!project.rooms.length) {
+    showToast("Cadastre um ambiente antes de relatar uma pendência.");
+    return;
+  }
+  issueForm.reset();
+  issueForm.elements.projectId.value = project.id;
+  issueForm.elements.roomId.innerHTML = project.rooms
+    .map((room) => `<option value="${escapeAttr(room.id)}">${escapeHtml(room.name)}</option>`)
+    .join("");
+  issueDialog.showModal();
 }
 
 function renderPeople() {
@@ -1361,6 +1466,30 @@ function renderProjects() {
     const projectId = button.closest("[data-project-id]")?.dataset.projectId;
     if (projectId) button.addEventListener("click", () => deletePhoto(projectId, button.dataset.deletePhoto));
   });
+
+  projectList.querySelectorAll("[data-purchase-approval]").forEach((button) => {
+    const projectId = button.closest("[data-project-id]")?.dataset.projectId;
+    if (projectId) {
+      button.addEventListener("click", () =>
+        updatePurchase(projectId, button.dataset.purchaseApproval, { approval: button.dataset.approval }),
+      );
+    }
+  });
+
+  projectList.querySelectorAll("[data-purchase-status]").forEach((select) => {
+    const projectId = select.closest("[data-project-id]")?.dataset.projectId;
+    if (projectId) {
+      select.addEventListener("change", () =>
+        updatePurchase(projectId, select.dataset.purchaseStatus, { purchase_status: select.value }),
+      );
+    }
+  });
+
+  projectList.querySelectorAll("[data-purchase-invoice]").forEach((button) => {
+    const projectId = button.closest("[data-project-id]")?.dataset.projectId;
+    const project = getProject(projectId);
+    if (project) button.addEventListener("click", () => openInvoiceDialog(project, button.dataset.purchaseInvoice));
+  });
 }
 
 function renderExpandedProject(project) {
@@ -1379,7 +1508,8 @@ function renderExpandedProject(project) {
         <span class="tag">Montador ${escapeHtml(personName(project.montadorId))}</span>
       </div>
       <div class="action-row">
-        ${requireAdmin() ? `<button class="secondary-action" data-action="editProject" type="button">Editar projeto</button>` : ""}
+        ${isAdminView() ? `<button class="secondary-action" data-action="editProject" type="button">Editar projeto</button>` : ""}
+        ${isAdminView() ? `<button class="danger-action" data-action="deleteProject" type="button">Excluir projeto</button>` : ""}
         ${roleActionButtons(project)}
       </div>
     </div>
@@ -1601,18 +1731,39 @@ function renderPurchases(project) {
       ? `<div class="empty-state">Nenhuma compra solicitada para este projeto.</div>`
       : project.purchases
           .map(
-            (item) => `
+            (item) => {
+              const invoiceFile = (project.files.compras || []).find((file) => file.path === item.invoice);
+              return `
         <article class="purchase-item">
           <div>
             <strong>${escapeHtml(item.item)}</strong>
             <span class="meta">${escapeHtml(item.qty)} · ${escapeHtml(personName(item.requestedById))}</span>
+            ${item.notes ? `<span class="meta">${escapeHtml(item.notes)}</span>` : ""}
+            ${invoiceFile?.url ? `<a class="meta" href="${escapeAttr(invoiceFile.url)}" target="_blank" rel="noreferrer">Ver fatura anexada</a>` : ""}
           </div>
-          <div class="project-tags">
+          <div class="purchase-controls">
             <span class="tag">${escapeHtml(item.approval)}</span>
             <span class="tag">${escapeHtml(item.purchaseStatus)}</span>
+            ${
+              isAdminView() && item.approval === "pendente"
+                ? `<button class="primary-action compact-action" data-purchase-approval="${escapeAttr(item.id)}" data-approval="aprovado" type="button">Aprovar</button>
+                   <button class="danger-action compact-action" data-purchase-approval="${escapeAttr(item.id)}" data-approval="recusado" type="button">Recusar</button>`
+                : ""
+            }
+            ${
+              state.role === "comprador" && item.approval === "aprovado"
+                ? `<select data-purchase-status="${escapeAttr(item.id)}" aria-label="Estado da compra de ${escapeAttr(item.item)}">
+                    ${["aguardando", "cotando", "comprado", "entregue", "cancelado"]
+                      .map((status) => `<option value="${status}" ${item.purchaseStatus === status ? "selected" : ""}>${escapeHtml(status)}</option>`)
+                      .join("")}
+                  </select>
+                  <button class="secondary-action compact-action" data-purchase-invoice="${escapeAttr(item.id)}" type="button">Anexar fatura</button>`
+                : ""
+            }
           </div>
         </article>
-      `,
+      `;
+            },
           )
           .join("");
   return `
@@ -1624,7 +1775,7 @@ function renderPurchases(project) {
 }
 
 function renderAlerts(project) {
-  const canEditAlerts = requireAdmin();
+  const canEditAlerts = isAdminView();
   const visibleAlerts = project.alerts.filter((alert) => alert.resolved !== true);
   const alerts =
     visibleAlerts.length === 0
@@ -1640,6 +1791,7 @@ function renderAlerts(project) {
                   ${alert.assigneeId ? ` · Resp. ${escapeHtml(personName(alert.assigneeId))}` : ""}
                   ${alert.dueDate ? ` · Prazo ${formatDate(alert.dueDate)}` : ""}
                 </span>
+                ${alert.description ? `<span class="meta">${escapeHtml(alert.description)}</span>` : ""}
               </div>
               <div class="alert-actions">
                 <span class="alert-pill ${escapeAttr(alert.level)}">${escapeHtml(alertLabels[alert.level] || alert.level)}</span>
@@ -1660,12 +1812,32 @@ function renderAlerts(project) {
 }
 
 function renderDrive(project) {
-  const allFolders = [
+  const foldersByRole = {
+    adm: [
+      ["Medição", "medicao"],
+      ["Engenharia", "engenharia"],
+      ["Obra", "obra"],
+      ["Compras", "compras"],
+      ["Assistência", "assistencia"],
+    ],
+    medidor: [["Medição", "medicao"]],
+    projetista: [
+      ["Medição", "medicao"],
+      ["Engenharia", "engenharia"],
+      ["Obra", "obra"],
+    ],
+    comprador: [["Compras", "compras"]],
+    montador: [
+      ["Obra", "obra"],
+      ["Assistência", "assistencia"],
+    ],
+    cliente: [["Obra", "obra"]],
+  };
+  const folders = foldersByRole[state.role] || [
     ["Medição", "medicao"],
     ["Engenharia", "engenharia"],
     ["Obra", "obra"],
   ];
-  const folders = state.role === "cliente" || state.role === "montador" ? [["Obra", "obra"]] : allFolders;
   return `
     <section class="detail-block">
       <h3>Arquivos do projeto</h3>
@@ -1680,7 +1852,13 @@ function renderDrive(project) {
                 <div class="file-row">
                   ${
                     (project.files[key] || []).length
-                      ? project.files[key].map((file) => `<span class="file-chip">${escapeHtml(file.name || file)}</span>`).join("")
+                      ? project.files[key]
+                          .map((file) =>
+                            file.url
+                              ? `<a class="file-chip file-link" href="${escapeAttr(file.url)}" target="_blank" rel="noreferrer">${escapeHtml(file.name || file)}</a>`
+                              : `<span class="file-chip">${escapeHtml(file.name || file)}</span>`,
+                          )
+                          .join("")
                       : `<span class="file-chip">Pasta criada automaticamente</span>`
                   }
                 </div>
@@ -1694,6 +1872,37 @@ function renderDrive(project) {
   `;
 }
 
+async function deleteProject(project) {
+  if (!requireAdmin()) {
+    showToast("Somente administradores podem excluir projetos.");
+    return;
+  }
+  if (!window.confirm(`Excluir definitivamente o projeto "${project.number} - ${project.client}"?`)) return;
+  try {
+    if (isRealBackend()) {
+      const storagePaths = Object.values(project.files || {})
+        .flat()
+        .map((file) => file?.path)
+        .filter(Boolean);
+      if (storagePaths.length) {
+        const { error: storageError } = await supabaseClient.storage.from("project-files").remove(storagePaths);
+        if (storageError) throw storageError;
+      }
+      const { error } = await supabaseClient.from("projects").delete().eq("id", project.id);
+      if (error) throw error;
+      await loadBackendData();
+    } else {
+      state.projects = state.projects.filter((item) => item.id !== project.id);
+      state.selectedProjectId = "";
+      persistPilotData();
+      renderProjects();
+    }
+    showToast("Projeto excluído com sucesso.");
+  } catch (error) {
+    showToast(friendlyError(error, "Não foi possível excluir o projeto."));
+  }
+}
+
 async function handleAction(action, projectId, extra = "") {
   const project = state.projects.find((item) => item.id === projectId);
   if (!project) return;
@@ -1703,8 +1912,41 @@ async function handleAction(action, projectId, extra = "") {
     return;
   }
 
+  if (action === "deleteProject") {
+    await deleteProject(project);
+    return;
+  }
+
   if (action === "openAlert") {
     openAlertDialog(project.id);
+    return;
+  }
+
+  if (action === "requestPurchase") {
+    openPurchaseDialog(project);
+    return;
+  }
+
+  if (action === "uploadFiles") {
+    openFileDialog(project);
+    return;
+  }
+
+  if (action === "attachInvoice") {
+    openInvoiceDialog(project);
+    return;
+  }
+
+  if (action === "reportIssue") {
+    openIssueDialog(project);
+    return;
+  }
+
+  if (action === "takePhotos") {
+    const projectCard = projectList.querySelector(`[data-project-id="${CSS.escape(project.id)}"]`);
+    const input = projectCard?.querySelector("[data-room-photo-input]");
+    if (input) input.click();
+    else showToast("Este projeto ainda não possui ambiente disponível para fotografar.");
     return;
   }
 
@@ -1712,7 +1954,7 @@ async function handleAction(action, projectId, extra = "") {
     try {
       await handleBackendAction(action, project, extra);
       const label = actionActivityLabel(action, extra);
-      if (label) {
+      if (label && state.role !== "comprador") {
         if (action === "setSchedule") project.scheduleType = extra === "montagem" ? "montagem" : "medicao";
         addActivity(project, label);
         await persistProjectNotes(project);
@@ -1741,13 +1983,6 @@ async function handleAction(action, projectId, extra = "") {
     showToast("Alerta vermelho criado para a equipa de montagem.");
   }
 
-  if (action === "takePhotos") {
-    project.rooms.forEach((room) => {
-      room.measurementPhotos += 1;
-    });
-    showToast("Abra o ambiente desejado e use Abrir câmera para anexar fotos reais.");
-  }
-
   if (action === "finishMeasurement") {
     project.status = "desenvolvimento";
     showToast("Medição finalizada. O projeto foi liberado para o projetista.");
@@ -1759,44 +1994,11 @@ async function handleAction(action, projectId, extra = "") {
     showToast("Start registado. O ADM foi notificado.");
   }
 
-  if (action === "requestPurchase") {
-    project.purchases.push({
-      id: `c-${Date.now()}`,
-      item: "Ferragem especial sob medida",
-      qty: "1 kit",
-      requestedById: activePerson()?.id || "",
-      approval: "pendente",
-      purchaseStatus: "aguardando",
-      invoice: "",
-    });
-    showToast("Material enviado para análise do ADM.");
-  }
-
-  if (action === "uploadFiles") {
-    project.files.engenharia.push(`Fabrica_${project.number}.plano`);
-    project.files.obra.push(`Obra_${project.number}.pdf`);
-    showToast("Ficheiros enviados para Engenharia e Obra no Drive.");
-  }
-
   if (action === "markPurchased") {
     project.purchases.forEach((item) => {
       if (item.approval === "aprovado" && item.purchaseStatus !== "entregue") item.purchaseStatus = "comprado";
     });
     showToast("Itens aprovados marcados como comprados.");
-  }
-
-  if (action === "attachInvoice") {
-    project.purchases.forEach((item) => {
-      if (item.approval === "aprovado" && !item.invoice) item.invoice = `NF-${project.number}.pdf`;
-    });
-    showToast("Fatura anexada ao pedido de compra.");
-  }
-
-  if (action === "reportIssue") {
-    const firstOpenRoom = project.rooms.find((room) => !room.installDone) ?? project.rooms[0];
-    firstOpenRoom.supportNote = "Pendência reportada na montagem. ADM deve fabricar reposição.";
-    project.alerts.unshift({ id: `a-${Date.now()}`, level: "critical", title: `Assistência aberta em ${firstOpenRoom.name}`, status: "open", source: "Montador", resolved: false });
-    showToast("Pendência enviada ao ADM com alerta vermelho imediato.");
   }
 
   const label = actionActivityLabel(action, extra);
@@ -1810,14 +2012,9 @@ function actionActivityLabel(action, extra = "") {
     approveAll: "Compras aprovadas pelo ADM",
     setSchedule: `Agenda ativa alterada para ${extra === "medicao" ? "medição" : "montagem"}`,
     addCriticalAlert: "Alerta crítico criado",
-    takePhotos: "Fotos de medição registradas",
     finishMeasurement: "Medição finalizada",
     startDesign: "Desenvolvimento iniciado",
-    requestPurchase: "Material solicitado para aprovação",
-    uploadFiles: "Arquivos técnicos anexados",
     markPurchased: "Itens marcados como comprados",
-    attachInvoice: "Fatura anexada",
-    reportIssue: "Pendência de montagem relatada",
   };
   return labels[action] || "";
 }
@@ -1858,19 +2055,6 @@ async function handleBackendAction(action, project, extra = "") {
     showToast("Alerta vermelho criado para a equipa de montagem.");
   }
 
-  if (action === "takePhotos") {
-    const updates = project.rooms.map((room) =>
-      supabaseClient
-        .from("rooms")
-        .update({ measurement_photos_count: room.measurementPhotos + 1 })
-        .eq("id", room.id),
-    );
-    const results = await Promise.all(updates);
-    const failed = results.find((result) => result.error);
-    if (failed) throw failed.error;
-    showToast("Fotos adicionadas às pastas de medição por ambiente.");
-  }
-
   if (action === "finishMeasurement") {
     const { error } = await supabaseClient.from("projects").update({ status: "desenvolvimento" }).eq("id", project.id);
     if (error) throw error;
@@ -1894,39 +2078,6 @@ async function handleBackendAction(action, project, extra = "") {
     showToast("Start registado. O ADM foi notificado.");
   }
 
-  if (action === "requestPurchase") {
-    const { error } = await supabaseClient.from("purchases").insert({
-      company_id: state.companyId,
-      project_id: project.id,
-      material: "Ferragem especial sob medida",
-      quantity: "1 kit",
-      requested_by: state.profile.id,
-      approval: "pendente",
-      purchase_status: "aguardando",
-    });
-    if (error) throw error;
-    showToast("Material enviado para análise do ADM.");
-  }
-
-  if (action === "uploadFiles") {
-    const files = [
-      { category: "engenharia", file_name: `Fabrica_${project.number}.plano` },
-      { category: "obra", file_name: `Obra_${project.number}.pdf` },
-    ];
-    const { error } = await supabaseClient.from("project_files").insert(
-      files.map((file) => ({
-        company_id: state.companyId,
-        project_id: project.id,
-        category: file.category,
-        file_name: file.file_name,
-        storage_path: `${state.companyId}/${project.id}/${file.category}/${file.file_name}`,
-        uploaded_by: state.profile.id,
-      })),
-    );
-    if (error) throw error;
-    showToast("Ficheiros registrados em Engenharia e Obra.");
-  }
-
   if (action === "markPurchased") {
     const { error } = await supabaseClient
       .from("purchases")
@@ -1937,37 +2088,6 @@ async function handleBackendAction(action, project, extra = "") {
     showToast("Itens aprovados marcados como comprados.");
   }
 
-  if (action === "attachInvoice") {
-    const { error } = await supabaseClient
-      .from("purchases")
-      .update({ invoice_path: `NF-${project.number}.pdf` })
-      .eq("project_id", project.id)
-      .eq("approval", "aprovado")
-      .is("invoice_path", null);
-    if (error) throw error;
-    showToast("Fatura anexada ao pedido de compra.");
-  }
-
-  if (action === "reportIssue") {
-    const room = project.rooms.find((item) => !item.installDone) || project.rooms[0];
-    if (!room) throw new Error("Cadastre um ambiente antes de relatar pendência.");
-    const { error: roomError } = await supabaseClient
-      .from("rooms")
-      .update({ support_note: "Pendência reportada na montagem. ADM deve fabricar reposição.", support_open: true })
-      .eq("id", room.id);
-    if (roomError) throw roomError;
-    const { error: alertError } = await supabaseClient.from("alerts").insert({
-      company_id: state.companyId,
-      project_id: project.id,
-      room_id: room.id,
-      level: "critical",
-      title: `Assistência aberta em ${room.name}`,
-      description: alertDescription({ status: "open" }),
-      created_by: state.profile.id,
-    });
-    if (alertError) throw alertError;
-    showToast("Pendência enviada ao ADM com alerta vermelho imediato.");
-  }
 }
 
 async function saveAlertFromForm(formData) {
@@ -2033,16 +2153,13 @@ async function deleteAlert(projectId, alertId) {
 
   if (isRealBackend()) {
     try {
-      const { error } = await supabaseClient
-        .from("alerts")
-        .update({ resolved: true, resolved_at: new Date().toISOString() })
-        .eq("id", alertId);
+      const { error } = await supabaseClient.from("alerts").delete().eq("id", alertId);
       if (error) throw error;
       addActivity(project, `Alerta excluído: ${alert.title}`);
       await persistProjectNotes(project);
       await loadBackendData();
       renderProjects();
-      showToast("Alerta excluído da interface do projeto.");
+      showToast("Alerta excluído do projeto.");
     } catch (error) {
       showToast(friendlyError(error, "Não foi possível excluir o alerta."));
     }
@@ -2159,26 +2276,16 @@ async function updateRoomMeasurement(projectId, roomName, key, value) {
 async function uploadRoomPhotos(projectId, roomName, fileList) {
   const project = getProject(projectId);
   const room = findRoom(projectId, roomName);
-  const files = Array.from(fileList || []).filter((file) => file.type.startsWith("image/"));
+  const files = Array.from(fileList || []).filter((file) => isSafeRasterImage(file));
   if (!project || !room || !files.length) return;
 
   if (isRealBackend()) {
+    const uploadedIds = [];
     try {
       for (const file of files) {
-        const safeName = `${Date.now()}-${file.name}`.replace(/[^\w.\-]+/g, "-");
-        const storagePath = `${state.companyId}/${project.id}/medicao/${room.id}/${safeName}`;
-        const upload = await supabaseClient.storage.from("project-files").upload(storagePath, file, { contentType: file.type, upsert: false });
-        if (upload.error) throw upload.error;
-        const { error } = await supabaseClient.from("project_files").insert({
-          company_id: state.companyId,
-          project_id: project.id,
-          room_id: room.id,
-          category: "medicao",
-          file_name: file.name,
-          storage_path: storagePath,
-          uploaded_by: state.profile.id,
-        });
-        if (error) throw error;
+        validateUpload(file, "imagem");
+        const uploaded = await uploadProjectAsset(project, "medicao", file, room.id);
+        uploadedIds.push(uploaded.id);
       }
       const { error: roomError } = await supabaseClient
         .from("rooms")
@@ -2190,6 +2297,7 @@ async function uploadRoomPhotos(projectId, roomName, fileList) {
       await loadBackendData();
       showToast("Fotos enviadas para a pasta de medição.");
     } catch (error) {
+      await Promise.all(uploadedIds.map((fileId) => manageProjectFile({ method: "DELETE", fileId })));
       showToast(friendlyError(error, "Não foi possível enviar as fotos. Confirme se o Storage project-files está configurado."));
     }
     return;
@@ -2248,6 +2356,12 @@ async function deletePhoto(projectId, photoId) {
   if (isRealBackend()) {
     const ok = await manageProjectFile({ method: "DELETE", fileId: photo.id });
     if (!ok) return;
+    const room = project.rooms.find((item) => item.id === photo.roomId);
+    if (room) {
+      const nextCount = Math.max(0, Number(room.measurementPhotos || 0) - 1);
+      const { error } = await supabaseClient.from("rooms").update({ measurement_photos_count: nextCount }).eq("id", room.id);
+      if (error) showToast(friendlyError(error, "A foto foi excluída, mas o contador não pôde ser atualizado."));
+    }
     addActivity(project, `Foto excluída: ${photo.name}`);
     await persistProjectNotes(project);
     await loadBackendData();
@@ -2278,6 +2392,75 @@ async function manageProjectFile({ method, fileId, fileName = "" }) {
   } catch (error) {
     showToast(friendlyError(error, "Não foi possível gerir a foto."));
     return false;
+  }
+}
+
+function validateUpload(file, label = "arquivo") {
+  if (!file) throw new Error(`Selecione o ${label}.`);
+  if (file.size > 20 * 1024 * 1024) throw new Error(`O ${label} ultrapassa o limite de 20 MB.`);
+}
+
+function isSafeRasterImage(file) {
+  return Boolean(file?.type?.startsWith("image/") && file.type !== "image/svg+xml");
+}
+
+function isAllowedEngineeringFile(file) {
+  return /\.(pdf|dwg|dxf|skp|step|stp)$/i.test(file?.name || "");
+}
+
+async function uploadProjectAsset(project, category, file, roomId = "", contentType = file.type || "application/octet-stream") {
+  validateUpload(file);
+  const safeName = `${Date.now()}-${crypto.randomUUID()}-${file.name}`.replace(/[^\w.\-]+/g, "-");
+  const storagePath = `${state.companyId}/${project.id}/${category}/${safeName}`;
+  const upload = await supabaseClient.storage.from("project-files").upload(storagePath, file, {
+    contentType,
+    upsert: false,
+  });
+  if (upload.error) throw upload.error;
+
+  const { data, error } = await supabaseClient
+    .from("project_files")
+    .insert({
+      company_id: state.companyId,
+      project_id: project.id,
+      room_id: roomId || null,
+      category,
+      file_name: file.name,
+      storage_path: storagePath,
+      uploaded_by: state.profile.id,
+    })
+    .select()
+    .single();
+  if (error) {
+    await supabaseClient.storage.from("project-files").remove([storagePath]);
+    throw error;
+  }
+  return data;
+}
+
+async function updatePurchase(projectId, purchaseId, changes) {
+  const project = getProject(projectId);
+  const purchase = project?.purchases.find((item) => item.id === purchaseId);
+  if (!project || !purchase) return;
+  try {
+    if (isRealBackend()) {
+      const { error } = await supabaseClient.from("purchases").update(changes).eq("id", purchaseId);
+      if (error) throw error;
+      if (changes.approval) {
+        addActivity(project, `Compra ${changes.approval}: ${purchase.item}`);
+        await persistProjectNotes(project);
+      }
+      await loadBackendData();
+    } else {
+      if (changes.approval) purchase.approval = changes.approval;
+      if (changes.purchase_status) purchase.purchaseStatus = changes.purchase_status;
+      persistPilotData();
+      renderProjects();
+    }
+    showToast(changes.approval ? `Solicitação ${changes.approval}.` : "Estado da compra atualizado.");
+  } catch (error) {
+    showToast(friendlyError(error, "Não foi possível atualizar a compra."));
+    await loadBackendData().catch(() => {});
   }
 }
 
@@ -2464,8 +2647,8 @@ passwordForm.addEventListener("submit", async (event) => {
   if (event.submitter?.value === "cancel") return;
   event.preventDefault();
   const newPassword = String(new FormData(passwordForm).get("newPassword") || "").trim();
-  if (newPassword.length < 6) {
-    showToast("A nova senha deve ter pelo menos 6 caracteres.");
+  if (!isStrongPassword(newPassword)) {
+    showToast("Use ao menos 10 caracteres, incluindo letra maiúscula, minúscula e número.");
     return;
   }
   const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
@@ -2478,12 +2661,14 @@ passwordForm.addEventListener("submit", async (event) => {
   showToast("Senha alterada com sucesso.");
 });
 
+function isStrongPassword(password) {
+  return String(password).length >= 10 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password);
+}
+
 logoutBtn.addEventListener("click", async () => {
   if (supabaseClient) await supabaseClient.auth.signOut();
-  state.backendMode = false;
-  state.session = null;
-  state.profile = null;
-  state.companyId = "";
+  closeTour();
+  clearBackendState();
   showAuthGate(true);
   showToast("Sessão encerrada.");
 });
@@ -2594,6 +2779,205 @@ alertForm.addEventListener("submit", async (event) => {
     renderProjects();
   } catch (error) {
     showToast(friendlyError(error, "Não foi possível salvar o alerta."));
+  }
+});
+
+purchaseForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(purchaseForm);
+  const project = getProject(String(formData.get("projectId") || ""));
+  const material = String(formData.get("material") || "").trim();
+  const quantity = String(formData.get("quantity") || "").trim();
+  const notes = String(formData.get("notes") || "").trim();
+  if (!project || !material || !quantity) return;
+  const submitter = event.submitter;
+  if (submitter) submitter.disabled = true;
+  try {
+    if (isRealBackend()) {
+      const { error } = await supabaseClient.from("purchases").insert({
+        company_id: state.companyId,
+        project_id: project.id,
+        room_id: nullIfEmpty(formData.get("roomId")),
+        material,
+        quantity,
+        notes: notes || null,
+        requested_by: state.profile.id,
+        approval: "pendente",
+        purchase_status: "aguardando",
+      });
+      if (error) throw error;
+      addActivity(project, `Material solicitado: ${material}`);
+      await persistProjectNotes(project);
+      await loadBackendData();
+    } else {
+      project.purchases.push({
+        id: `c-${Date.now()}`,
+        item: material,
+        qty: quantity,
+        roomId: String(formData.get("roomId") || ""),
+        notes,
+        requestedById: activePerson()?.id || "",
+        approval: "pendente",
+        purchaseStatus: "aguardando",
+        invoice: "",
+      });
+      persistPilotData();
+      renderProjects();
+    }
+    purchaseForm.reset();
+    purchaseDialog.close();
+    showToast("Material enviado para análise do ADM.");
+  } catch (error) {
+    showToast(friendlyError(error, "Não foi possível solicitar o material."));
+  } finally {
+    if (submitter) submitter.disabled = false;
+  }
+});
+
+fileForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(fileForm);
+  const project = getProject(String(formData.get("projectId") || ""));
+  const engineeringFile = fileForm.elements.engineeringFile.files[0];
+  const workFile = fileForm.elements.workFile.files[0];
+  if (!project) return;
+  if (!engineeringFile && !workFile) {
+    showToast("Selecione ao menos um arquivo técnico.");
+    return;
+  }
+  const submitter = event.submitter;
+  if (submitter) submitter.disabled = true;
+  try {
+    [engineeringFile, workFile].filter(Boolean).forEach((file) => validateUpload(file));
+    if (engineeringFile && !isAllowedEngineeringFile(engineeringFile)) {
+      throw new Error("O arquivo de fábrica deve ser PDF, DWG, DXF, SKP, STEP ou STP.");
+    }
+    if (workFile && workFile.type !== "application/pdf" && !isSafeRasterImage(workFile)) {
+      throw new Error("O arquivo de obra deve ser PDF ou imagem.");
+    }
+    if (isRealBackend()) {
+      if (engineeringFile) {
+        const contentType = engineeringFile.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream";
+        await uploadProjectAsset(project, "engenharia", engineeringFile, "", contentType);
+      }
+      if (workFile) await uploadProjectAsset(project, "obra", workFile);
+      addActivity(project, "Arquivos técnicos anexados");
+      await persistProjectNotes(project);
+      await loadBackendData();
+    } else {
+      if (engineeringFile) (project.files.engenharia ||= []).push({ name: engineeringFile.name });
+      if (workFile) (project.files.obra ||= []).push({ name: workFile.name });
+      persistPilotData();
+      renderProjects();
+    }
+    fileForm.reset();
+    fileDialog.close();
+    showToast("Arquivos enviados para as pastas corretas.");
+  } catch (error) {
+    showToast(friendlyError(error, "Não foi possível enviar os arquivos."));
+  } finally {
+    if (submitter) submitter.disabled = false;
+  }
+});
+
+invoiceForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(invoiceForm);
+  const project = getProject(String(formData.get("projectId") || ""));
+  const purchaseId = String(formData.get("purchaseId") || "");
+  const purchase = project?.purchases.find((item) => item.id === purchaseId);
+  const invoiceFile = invoiceForm.elements.invoiceFile.files[0];
+  if (!project || !purchase) return;
+  const submitter = event.submitter;
+  if (submitter) submitter.disabled = true;
+  let uploadedFile = null;
+  try {
+    validateUpload(invoiceFile, "comprovante");
+    if (invoiceFile.type !== "application/pdf" && !isSafeRasterImage(invoiceFile)) {
+      throw new Error("Envie a fatura em PDF ou imagem.");
+    }
+    if (isRealBackend()) {
+      uploadedFile = await uploadProjectAsset(project, "compras", invoiceFile);
+      const { error } = await supabaseClient
+        .from("purchases")
+        .update({ invoice_path: uploadedFile.storage_path })
+        .eq("id", purchaseId);
+      if (error) {
+        await manageProjectFile({ method: "DELETE", fileId: uploadedFile.id });
+        throw error;
+      }
+      await loadBackendData();
+    } else {
+      const path = `local/compras/${Date.now()}-${invoiceFile.name}`;
+      purchase.invoice = path;
+      (project.files.compras ||= []).push({ name: invoiceFile.name, path });
+      persistPilotData();
+      renderProjects();
+    }
+    invoiceForm.reset();
+    invoiceDialog.close();
+    showToast("Fatura anexada ao item selecionado.");
+  } catch (error) {
+    showToast(friendlyError(error, "Não foi possível anexar a fatura."));
+  } finally {
+    if (submitter) submitter.disabled = false;
+  }
+});
+
+issueForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(issueForm);
+  const project = getProject(String(formData.get("projectId") || ""));
+  const roomId = String(formData.get("roomId") || "");
+  const room = project?.rooms.find((item) => item.id === roomId);
+  const title = String(formData.get("title") || "").trim();
+  const description = String(formData.get("description") || "").trim();
+  const level = formData.get("level") === "attention" ? "attention" : "critical";
+  if (!project || !room || !title) return;
+  const submitter = event.submitter;
+  if (submitter) submitter.disabled = true;
+  try {
+    const supportNote = description ? `${title}: ${description}` : title;
+    if (isRealBackend()) {
+      const { error: roomError } = await supabaseClient
+        .from("rooms")
+        .update({ support_note: supportNote, support_open: true })
+        .eq("id", room.id);
+      if (roomError) throw roomError;
+      const { error: alertError } = await supabaseClient.from("alerts").insert({
+        company_id: state.companyId,
+        project_id: project.id,
+        room_id: room.id,
+        level,
+        title,
+        description: alertDescription({ status: "open", description }),
+        created_by: state.profile.id,
+      });
+      if (alertError) throw alertError;
+      addActivity(project, `Pendência relatada em ${room.name}: ${title}`);
+      await persistProjectNotes(project);
+      await loadBackendData();
+    } else {
+      room.supportNote = supportNote;
+      project.alerts.unshift({
+        id: `a-${Date.now()}`,
+        level,
+        title,
+        description,
+        status: "open",
+        source: activePerson()?.name || "Montador",
+        resolved: false,
+      });
+      persistPilotData();
+      renderProjects();
+    }
+    issueForm.reset();
+    issueDialog.close();
+    showToast("Pendência enviada ao ADM.");
+  } catch (error) {
+    showToast(friendlyError(error, "Não foi possível enviar a pendência."));
+  } finally {
+    if (submitter) submitter.disabled = false;
   }
 });
 

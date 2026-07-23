@@ -2,7 +2,9 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const validRoles = new Set(["adm", "medidor", "projetista", "comprador", "montador", "cliente"]);
 const MAX_FIELD_LENGTH = 180;
+const MIN_PASSWORD_LENGTH = 10;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const strongPasswordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
 
 const headers = {
   "Content-Type": "application/json",
@@ -42,8 +44,10 @@ module.exports = async function handler(req, res) {
   if (!validRoles.has(role)) {
     return response(res, 400, { error: "Invalid user role." });
   }
-  if (String(password).length < 6) {
-    return response(res, 400, { error: "Password must have at least 6 characters." });
+  if (!isStrongPassword(password)) {
+    return response(res, 400, {
+      error: `Password must have at least ${MIN_PASSWORD_LENGTH} characters, including uppercase, lowercase and a number.`,
+    });
   }
 
   const requester = await getRequesterProfile(token);
@@ -73,6 +77,10 @@ module.exports = async function handler(req, res) {
     return response(res, 400, { error: error.message || "Could not create user." });
   }
 };
+
+function isStrongPassword(password) {
+  return String(password).length >= MIN_PASSWORD_LENGTH && strongPasswordPattern.test(String(password));
+}
 
 async function getRequesterProfile(token) {
   const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {

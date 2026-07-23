@@ -1148,6 +1148,43 @@ h2 {
   font-size: 0.88rem;
 }
 
+.form-grid textarea {
+  width: 100%;
+  min-height: 94px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 10px 12px;
+}
+
+.purchase-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.purchase-controls select {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 8px;
+}
+
+.file-link {
+  text-decoration: none;
+}
+
+.file-link:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+
 .form-grid .wide {
   grid-column: 1 / -1;
 }
@@ -1284,8 +1321,7 @@ h2 {
   }
 
   .sidebar {
-    position: sticky;
-    top: 0;
+    position: static;
     z-index: 10;
     width: 100%;
     min-width: 0;
@@ -1323,6 +1359,22 @@ h2 {
 
   .detail-panel {
     position: static;
+  }
+
+  .topbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .topbar-actions {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    width: 100%;
+  }
+
+  .search-box {
+    width: 100%;
   }
 }
 
@@ -1487,7 +1539,20 @@ h2 {
   }
 
   .sidebar-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .sidebar-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sidebar-actions > button {
+    flex: 0 0 150px;
   }
 
   .sidebar-actions .primary-action,
@@ -1527,6 +1592,11 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .purchase-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .action-row {
     width: 100%;
   }
@@ -1559,6 +1629,11 @@ h2 {
     max-height: calc(100dvh - 16px);
   }
 
+  .modal input[type="file"] {
+    max-width: 100%;
+    padding: 8px;
+  }
+
   .modal-body {
     max-height: calc(100dvh - 16px);
     overflow-y: auto;
@@ -1589,8 +1664,7 @@ h2 {
 }
 
 @media (max-width: 420px) {
-  .metrics,
-  .sidebar-actions {
+  .metrics {
     grid-template-columns: 1fr;
   }
 
