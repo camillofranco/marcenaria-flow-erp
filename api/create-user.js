@@ -52,8 +52,9 @@ module.exports = async function handler(req, res) {
     return response(res, 403, { error: "Only administrators can create users." });
   }
 
+  let authUser = null;
   try {
-    const authUser = await createAuthUser({ email, password, fullName, role });
+    authUser = await createAuthUser({ email, password, fullName, role });
     const companyId = payload.companyId && requester.platform_admin ? payload.companyId : requester.company_id;
     const profile = await createProfile({
       id: authUser.id,
@@ -64,9 +65,11 @@ module.exports = async function handler(req, res) {
       phone,
       platformAdmin: false,
     });
+    if (!profile?.id) throw new Error("O perfil do usuário não foi confirmado após o cadastro.");
 
     return response(res, 200, { user: authUser, profile });
   } catch (error) {
+    if (authUser?.id) await deleteAuthUser(authUser.id);
     return response(res, 400, { error: error.message || "Could not create user." });
   }
 };
@@ -138,6 +141,17 @@ async function createProfile({ id, companyId, fullName, email, role, phone, plat
   const data = await response.json();
   if (!response.ok) throw new Error(data.message || "Could not create profile.");
   return data[0];
+}
+
+async function deleteAuthUser(id) {
+  try {
+    await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${id}`, {
+      method: "DELETE",
+      headers: serviceHeaders(),
+    });
+  } catch {
+    // Best-effort rollback prevents an incomplete account from being reported as ready.
+  }
 }
 
 function formatSupabaseAuthError(data) {

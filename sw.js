@@ -1,10 +1,10 @@
-const CACHE_NAME = "marcenaria-flow-shell-v20260722-3";
+const CACHE_NAME = "marcenaria-flow-shell-v20260723-1";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=20260722-3",
-  "/assets/vendor/supabase.min.js?v=20260722-3",
-  "/app.js?v=20260722-3",
+  "/styles.css?v=20260723-1",
+  "/assets/vendor/supabase.min.js?v=20260723-1",
+  "/app.js?v=20260723-1",
   "/manifest.webmanifest",
   "/assets/favicon.png",
   "/assets/flow-marcenaria-logo.png",

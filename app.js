@@ -803,6 +803,10 @@ async function createPersonBackend(formData) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "Não foi possível criar o usuário.");
   await loadBackendData();
+  if (!data.profile?.id || !state.people.some((person) => person.id === data.profile.id)) {
+    throw new Error("O acesso foi enviado, mas o perfil não apareceu no Supabase. Tente novamente.");
+  }
+  return data.profile;
 }
 
 async function updatePersonBackend(formData) {
@@ -2611,6 +2615,11 @@ personForm.addEventListener("submit", async (event) => {
     } catch (error) {
       showToast(friendlyError(error, "Não foi possível cadastrar a pessoa."));
     }
+    return;
+  }
+  if (window.location.protocol === "https:") {
+    showAuthGate(true);
+    showToast("Faça login como administrador para criar um acesso real no Supabase.");
     return;
   }
   if (editingId) {
